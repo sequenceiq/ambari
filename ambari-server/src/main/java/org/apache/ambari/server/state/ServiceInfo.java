@@ -128,7 +128,13 @@ public class ServiceInfo implements Validable{
   private File widgetsDescriptorFile = null;
   
   @XmlTransient
-  private boolean valid = true;
+  private Boolean valid = true;
+
+  private Boolean installable = true;
+
+  private Boolean managed = true;
+
+  private Boolean monitored = true;
 
   /**
    * 
@@ -745,5 +751,29 @@ public String getVersion() {
 
   public void setThemesMap(Map<String, ThemeInfo> themesMap) {
     this.themesMap = themesMap;
+  }
+
+  public Boolean isInstallable() {
+    return installable;
+  }
+
+  public void setInstallable(Boolean installable) {
+    this.installable = installable;
+  }
+
+  public Boolean isManaged() {
+    return managed;
+  }
+
+  public void setManaged(Boolean managed) {
+    this.managed = managed;
+  }
+
+  public Boolean isMonitored() {
+    return monitored;
+  }
+
+  public void setMonitored(Boolean monitored) {
+    this.monitored = monitored;
   }
 }

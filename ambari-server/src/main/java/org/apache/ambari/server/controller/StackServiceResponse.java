@@ -22,11 +22,7 @@ import org.apache.ambari.server.state.CustomCommandDefinition;
 import org.apache.ambari.server.state.ServiceInfo;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class StackServiceResponse {
 
@@ -53,6 +49,13 @@ public class StackServiceResponse {
    * This may be null if a relevant file is not available.
    */
   private File kerberosDescriptorFile;
+
+  final private Boolean installable;
+
+  final Boolean managed;
+
+  final Boolean monitored;
+
 
   /**
    * Constructor.
@@ -84,6 +87,10 @@ public class StackServiceResponse {
     }
 
     kerberosDescriptorFile = service.getKerberosDescriptorFile();
+
+    installable = service.isInstallable();
+    managed = service.isManaged();
+    monitored = service.isMonitored();
   }
 
   public String getStackName() {
@@ -207,4 +214,25 @@ public String getServiceDisplayName() {
   public List<String> getCustomCommands() {
     return customCommands;
   }
+
+
+  /**
+   * Indicates whether the service can be installed via font-end.
+   * @return true if the service can be installed via front-end otherwise false
+   */
+  public Boolean isInstallable() { return installable; }
+
+  /**
+   * Indicates whether the service can be started or stopped - if not managed, the service should be hidden from all views where management operations can occur
+   * @return true if the service can be managed from front-end otherwise false.
+   */
+  public Boolean isManaged() { return managed; }
+
+
+  /**
+   * Indicates if service status can be displayed or not.
+   * @return true if status information can be displayed by front-end otherwise false.
+   */
+  public Boolean isMonitored() { return monitored; }
+
 }
