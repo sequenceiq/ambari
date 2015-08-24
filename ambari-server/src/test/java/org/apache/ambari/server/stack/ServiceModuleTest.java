@@ -969,6 +969,9 @@ public class ServiceModuleTest {
     Map<String, String> parentServiceProperties =  ImmutableMap.<String, String>builder()
       .put("P1", "V1")
       .put("P2", "V2")
+      .put(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY)
       .build();
 
 
@@ -1005,6 +1008,9 @@ public class ServiceModuleTest {
     Map<String, String> serviceProperties = ImmutableMap.<String, String>builder()
       .put("P1", "V1")
       .put("P2", "V2")
+      .put(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY)
       .build();
 
     assertEquals(servicePropertyList, serviceModule.getModuleInfo().getServicePropertyList());
@@ -1050,6 +1056,9 @@ public class ServiceModuleTest {
       .put("P1", "V1")
       .put("P2", "V2_OVERRIDE")
       .put("P3", "V3")
+      .put(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY)
+      .put(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY)
       .build();
 
     List<ServicePropertyInfo> actualPropertyList = serviceModule.getModuleInfo().getServicePropertyList();
