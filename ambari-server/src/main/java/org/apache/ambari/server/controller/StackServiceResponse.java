@@ -19,6 +19,7 @@
 package org.apache.ambari.server.controller;
 
 import org.apache.ambari.server.state.CustomCommandDefinition;
+import org.apache.ambari.server.state.DuplicateServicePropertyException;
 import org.apache.ambari.server.state.ServiceInfo;
 
 import java.io.File;
@@ -43,6 +44,8 @@ public class StackServiceResponse {
 
   private List<String> requiredServices;
 
+  private Map<String, String> serviceProperties;
+
   /**
    * A File pointing to the service-level Kerberos descriptor file
    *
@@ -50,20 +53,13 @@ public class StackServiceResponse {
    */
   private File kerberosDescriptorFile;
 
-  final private Boolean installable;
-
-  final Boolean managed;
-
-  final Boolean monitored;
-
-
   /**
    * Constructor.
    *
    * @param service
    *          the service to generate the response from (not {@code null}).
    */
-  public StackServiceResponse(ServiceInfo service) {
+  public StackServiceResponse(ServiceInfo service) throws DuplicateServicePropertyException {
     serviceName = service.getName();
     serviceType = service.getServiceType();
     serviceDisplayName = service.getDisplayName();
@@ -88,9 +84,7 @@ public class StackServiceResponse {
 
     kerberosDescriptorFile = service.getKerberosDescriptorFile();
 
-    installable = service.isInstallable();
-    managed = service.isManaged();
-    monitored = service.isMonitored();
+    serviceProperties = service.getServiceProperties();
   }
 
   public String getStackName() {
@@ -215,24 +209,12 @@ public String getServiceDisplayName() {
     return customCommands;
   }
 
-
   /**
-   * Indicates whether the service can be installed via font-end.
-   * @return true if the service can be installed via front-end otherwise false
+   * Get the service properties of this service.
+   * @return the properties or an empty map (never {@code null}).
    */
-  public Boolean isInstallable() { return installable; }
-
-  /**
-   * Indicates whether the service can be started or stopped - if not managed, the service should be hidden from all views where management operations can occur
-   * @return true if the service can be managed from front-end otherwise false.
-   */
-  public Boolean isManaged() { return managed; }
-
-
-  /**
-   * Indicates if service status can be displayed or not.
-   * @return true if status information can be displayed by front-end otherwise false.
-   */
-  public Boolean isMonitored() { return monitored; }
+  public Map<String, String> getServiceProperties() {
+    return serviceProperties;
+  }
 
 }

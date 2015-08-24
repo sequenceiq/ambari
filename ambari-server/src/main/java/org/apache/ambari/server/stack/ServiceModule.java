@@ -27,13 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.api.services.AmbariMetaInfo;
-import org.apache.ambari.server.state.ComponentInfo;
-import org.apache.ambari.server.state.CustomCommandDefinition;
-import org.apache.ambari.server.state.PropertyInfo;
-import org.apache.ambari.server.state.ServiceInfo;
-import org.apache.ambari.server.state.ThemeInfo;
+import org.apache.ambari.server.state.*;
 
 /**
  * Service module which provides all functionality related to parsing and fully
@@ -188,6 +187,40 @@ public class ServiceModule extends BaseModule<ServiceModule, ServiceInfo> implem
     mergeConfigurations(parentModule, allStacks, commonServices);
     mergeThemes(parentModule, allStacks, commonServices);
     mergeExcludedConfigTypes(parent);
+
+
+    mergeServiceProperties(parent);
+
+
+  }
+
+  /**
+   * Merges service properties from parent into the the service properties of this this service.
+   * Current properties with the same name as in parent
+   * @param parent
+   */
+  private void mergeServiceProperties(ServiceInfo parent) throws DuplicateServicePropertyException {
+    if (!parent.getServicePropertyList().isEmpty()) {
+      List<ServicePropertyInfo> servicePropertyList = serviceInfo.getServicePropertyList();
+      List<ServicePropertyInfo> servicePropertiesToAdd = Lists.newArrayList();
+
+      Map<String, String> servicePropertiesMap = serviceInfo.getServiceProperties();
+
+      for (ServicePropertyInfo parentServicePropertyInfo : parent.getServicePropertyList()) {
+        if (!servicePropertiesMap.containsKey(parentServicePropertyInfo.getName()))
+          servicePropertiesToAdd.add(parentServicePropertyInfo);
+      }
+
+      List<ServicePropertyInfo> mergedServicePropertyList =
+        ImmutableList.<ServicePropertyInfo>builder()
+          .addAll(servicePropertyList)
+          .addAll(servicePropertiesToAdd)
+          .build();
+
+      serviceInfo.setServicePropertyList(mergedServicePropertyList);
+
+      serviceInfo.setServicePropertyMap(null); // set to null in order to re-evaluate
+    }
   }
 
   /**

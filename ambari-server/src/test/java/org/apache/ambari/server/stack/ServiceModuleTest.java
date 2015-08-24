@@ -24,6 +24,7 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.easymock.EasyMock.anyObject;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -38,13 +39,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.ambari.server.AmbariException;
-import org.apache.ambari.server.state.CommandScriptDefinition;
-import org.apache.ambari.server.state.ComponentInfo;
-import org.apache.ambari.server.state.CustomCommandDefinition;
-import org.apache.ambari.server.state.PropertyInfo;
-import org.apache.ambari.server.state.ServiceInfo;
-import org.apache.ambari.server.state.ServiceOsSpecific;
+import org.apache.ambari.server.state.*;
 import org.junit.Test;
 
 /**
@@ -942,6 +941,124 @@ public class ServiceModuleTest {
 
     verify(context);
   }
+
+  @Test
+  public void testMergeServicePropertiesInheritFromParent() throws Exception {
+    // Given
+    ServiceInfo serviceInfo = new ServiceInfo();
+    ServiceInfo parentServiceInfo = new ServiceInfo();
+
+    ServicePropertyInfo p1 = new ServicePropertyInfo();
+    p1.setName("P1");
+    p1.setValue("V1");
+
+    ServicePropertyInfo p2 = new ServicePropertyInfo();
+    p2.setName("P2");
+    p2.setValue("V2");
+
+
+    List<ServicePropertyInfo> parentServicePropertyList = Lists.newArrayList(p1, p2);
+
+    parentServiceInfo.setServicePropertyList(parentServicePropertyList);
+
+
+    // When
+    ServiceModule serviceModule = resolveService(serviceInfo, parentServiceInfo);
+
+    // Then
+    Map<String, String> parentServiceProperties =  ImmutableMap.<String, String>builder()
+      .put("P1", "V1")
+      .put("P2", "V2")
+      .build();
+
+
+    assertEquals(parentServicePropertyList, serviceModule.getModuleInfo().getServicePropertyList());
+    assertEquals(parentServiceProperties, serviceModule.getModuleInfo().getServiceProperties());
+  }
+
+  @Test
+  public void testMergeServicePropertiesInheritFromEmptyParent() throws Exception {
+    // Parent has no properties defined thus no service properties inherited
+
+    // Given
+    ServiceInfo serviceInfo = new ServiceInfo();
+    ServiceInfo parentServiceInfo = new ServiceInfo();
+
+    ServicePropertyInfo p1 = new ServicePropertyInfo();
+    p1.setName("P1");
+    p1.setValue("V1");
+
+    ServicePropertyInfo p2 = new ServicePropertyInfo();
+    p2.setName("P2");
+    p2.setValue("V2");
+
+
+    List<ServicePropertyInfo> servicePropertyList = Lists.newArrayList(p1, p2);
+
+    serviceInfo.setServicePropertyList(servicePropertyList);
+
+
+    // When
+    ServiceModule serviceModule = resolveService(serviceInfo, parentServiceInfo);
+
+    // Then
+    Map<String, String> serviceProperties = ImmutableMap.<String, String>builder()
+      .put("P1", "V1")
+      .put("P2", "V2")
+      .build();
+
+    assertEquals(servicePropertyList, serviceModule.getModuleInfo().getServicePropertyList());
+    assertEquals(serviceProperties, serviceModule.getModuleInfo().getServiceProperties());
+  }
+
+
+  @Test
+  public void testMergeServiceProperties() throws Exception {
+    // Given
+    ServiceInfo serviceInfo = new ServiceInfo();
+    ServiceInfo parentServiceInfo = new ServiceInfo();
+
+    ServicePropertyInfo p1 = new ServicePropertyInfo();
+    p1.setName("P1");
+    p1.setValue("V1");
+
+    ServicePropertyInfo p2 = new ServicePropertyInfo();
+    p2.setName("P2");
+    p2.setValue("V2");
+
+    ServicePropertyInfo p2Override = new ServicePropertyInfo();
+    p2Override.setName("P2");
+    p2Override.setValue("V2_OVERRIDE");
+
+    ServicePropertyInfo p3 = new ServicePropertyInfo();
+    p3.setName("P3");
+    p3.setValue("V3");
+
+    List<ServicePropertyInfo> parentServicePropertyList = Lists.newArrayList(p1, p2);
+    parentServiceInfo.setServicePropertyList(parentServicePropertyList);
+
+    List<ServicePropertyInfo> servicePropertyList = Lists.newArrayList(p2Override, p3);
+    serviceInfo.setServicePropertyList(servicePropertyList);
+
+
+    // When
+    ServiceModule serviceModule = resolveService(serviceInfo, parentServiceInfo);
+
+    // Then
+    List<ServicePropertyInfo> expectedPropertyList = Lists.newArrayList(p1, p2Override, p3);
+    Map<String, String> expectedServiceProperties = ImmutableMap.<String, String>builder()
+      .put("P1", "V1")
+      .put("P2", "V2_OVERRIDE")
+      .put("P3", "V3")
+      .build();
+
+    List<ServicePropertyInfo> actualPropertyList = serviceModule.getModuleInfo().getServicePropertyList();
+
+
+    assertTrue(actualPropertyList.containsAll(expectedPropertyList) && expectedPropertyList.containsAll(actualPropertyList));
+    assertEquals(expectedServiceProperties, serviceModule.getModuleInfo().getServiceProperties());
+  }
+
 
   private ServiceModule createServiceModule(ServiceInfo serviceInfo) {
     String configType = "type1";

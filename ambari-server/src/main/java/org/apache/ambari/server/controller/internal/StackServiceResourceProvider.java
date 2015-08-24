@@ -71,14 +71,8 @@ public class StackServiceResourceProvider extends ReadOnlyResourceProvider {
   private static final String CUSTOM_COMMANDS_PROPERTY_ID = PropertyHelper.getPropertyId(
       "StackServices", "custom_commands");
 
-  private static final String SERVICE_INSTALLABLE_ID = PropertyHelper.getPropertyId(
-    "StackServices", "installable");
-
-  private static final String SERVICE_MANAGED_ID = PropertyHelper.getPropertyId(
-    "StackServices", "managed");
-
-  private static final String SERVICE_MONITORED_ID = PropertyHelper.getPropertyId(
-    "StackServices", "monitored");
+  private static final String SERVICE_PROPERTIES_PROPERTY_ID = PropertyHelper.getPropertyId(
+    "StackServices", "properties");
 
   private static Set<String> pkPropertyIds = new HashSet<String>(
       Arrays.asList(new String[] { STACK_NAME_PROPERTY_ID,
@@ -173,14 +167,9 @@ public class StackServiceResourceProvider extends ReadOnlyResourceProvider {
     setResourceProperty(resource, CUSTOM_COMMANDS_PROPERTY_ID,
         response.getCustomCommands(), requestedIds);
 
-    setResourceProperty(resource, SERVICE_INSTALLABLE_ID,
-            response.isInstallable(), requestedIds);
+    setResourceProperty(resource, SERVICE_PROPERTIES_PROPERTY_ID,
+      response.getServiceProperties(), requestedIds);
 
-    setResourceProperty(resource, SERVICE_MANAGED_ID,
-      response.isManaged(), requestedIds);
-
-    setResourceProperty(resource, SERVICE_MONITORED_ID,
-      response.isMonitored(), requestedIds);
     return resource;
   }
 

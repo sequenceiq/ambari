@@ -19,15 +19,7 @@
 package org.apache.ambari.server.state;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -36,9 +28,13 @@ import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlTransient;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.ambari.server.api.services.AmbariMetaInfo;
 import org.apache.ambari.server.stack.Validable;
 import org.apache.ambari.server.state.stack.MetricDefinition;
+import org.apache.commons.collections.keyvalue.DefaultKeyValue;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.map.annotate.JsonFilter;
 
@@ -46,6 +42,9 @@ import org.codehaus.jackson.map.annotate.JsonFilter;
 @JsonFilter("propertiesfilter")
 public class ServiceInfo implements Validable{
 
+  public static final AbstractMap.SimpleEntry<String, String> DEFAULT_SERVICE_INSTALLABLE_PROPERTY = new AbstractMap.SimpleEntry("installable", "true");
+  public static final AbstractMap.SimpleEntry<String, String> DEFAULT_SERVICE_MANAGED_PROPERTY = new AbstractMap.SimpleEntry("managed", "true");
+  public static final AbstractMap.SimpleEntry<String, String> DEFAULT_SERVICE_MONITORED_PROPERTY = new AbstractMap.SimpleEntry("monitored", "true");
   /**
    * Format version. Added at schema ver 2
    */
@@ -57,6 +56,8 @@ public class ServiceInfo implements Validable{
   private String version;
   private String comment;
   private String serviceType;
+
+  @XmlTransient
   private List<PropertyInfo> properties;
 
   @XmlElementWrapper(name="components")
@@ -128,13 +129,16 @@ public class ServiceInfo implements Validable{
   private File widgetsDescriptorFile = null;
   
   @XmlTransient
-  private Boolean valid = true;
+  private boolean valid = true;
 
-  private Boolean installable = true;
+  @XmlElementWrapper(name = "properties")
+  @XmlElement(name="property")
+  private List<ServicePropertyInfo> servicePropertyList = Lists.newArrayList();
 
-  private Boolean managed = true;
 
-  private Boolean monitored = true;
+
+  @XmlTransient
+  private Map<String, String> servicePropertyMap = null;
 
   /**
    * 
@@ -366,6 +370,7 @@ public String getVersion() {
     sb.append(version);
     sb.append("\ncomment:");
     sb.append(comment);
+
     //for (PropertyInfo property : getProperties()) {
     //  sb.append("\tProperty name=" + property.getName() +
     //"\nproperty value=" + property.getValue() + "\ndescription=" + property.getDescription());
@@ -753,27 +758,62 @@ public String getVersion() {
     this.themesMap = themesMap;
   }
 
-  public Boolean isInstallable() {
-    return installable;
+
+  public List<ServicePropertyInfo> getServicePropertyList() {
+    return servicePropertyList;
   }
 
-  public void setInstallable(Boolean installable) {
-    this.installable = installable;
+  public void setServicePropertyList(List<ServicePropertyInfo> servicePropertyList) {
+    this.servicePropertyList = servicePropertyList;
   }
 
-  public Boolean isManaged() {
-    return managed;
+
+  /**
+   * Returns the service properties defined in the xml service definition
+   * as a Map where the keys are the property names and values the property values.
+   * It ensures that missing required service properties are added with default values.
+   * @return Service property map
+   */
+  public Map<String, String> getServiceProperties() throws DuplicateServicePropertyException {
+    if (servicePropertyMap == null) {
+      synchronized (this) {
+        if (servicePropertyMap == null) {
+          Map<String, String> properties = Maps.newHashMap();
+
+          for (ServicePropertyInfo property: getServicePropertyList()) {
+            if (properties.containsKey(property.getName()))
+              throw new DuplicateServicePropertyException("Duplicate service property with name= " + property.getName() + " in the service definition !");
+
+            properties.put(property.getName(), property.getValue());
+          }
+
+          servicePropertyMap = ImmutableMap.copyOf(ensureMandatoryServiceProperties(properties));
+        }
+      }
+    }
+
+    return servicePropertyMap;
   }
 
-  public void setManaged(Boolean managed) {
-    this.managed = managed;
+  private Map<String, String> ensureMandatoryServiceProperties(Map<String, String> properties) {
+    return ensureVisibilityServiceProperties(properties);
   }
 
-  public Boolean isMonitored() {
-    return monitored;
+  private Map<String, String> ensureVisibilityServiceProperties(Map<String, String> properties) {
+    if (!properties.containsKey(DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey()))
+      properties.put(DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey(), DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getValue());
+
+    if (!properties.containsKey(DEFAULT_SERVICE_MANAGED_PROPERTY.getKey()))
+      properties.put(DEFAULT_SERVICE_MANAGED_PROPERTY.getKey(), DEFAULT_SERVICE_MANAGED_PROPERTY.getValue());
+
+
+    if (!properties.containsKey(DEFAULT_SERVICE_MONITORED_PROPERTY.getKey()))
+      properties.put(DEFAULT_SERVICE_MONITORED_PROPERTY.getKey(), DEFAULT_SERVICE_MONITORED_PROPERTY.getValue());
+
+    return properties;
   }
 
-  public void setMonitored(Boolean monitored) {
-    this.monitored = monitored;
+  public void setServicePropertyMap(Map<String, String> servicePropertyMap) {
+    this.servicePropertyMap = servicePropertyMap;
   }
 }

@@ -103,7 +103,7 @@ public class ServiceInfoTest {
 
     Map<String, ServiceInfo> serviceInfoMap = getServiceInfo(serviceInfoXml);
 
-    assertEquals("CUSTOM_metrics.json",serviceInfoMap.get("CUSTOM").getMetricsFileName());
+    assertEquals("CUSTOM_metrics.json", serviceInfoMap.get("CUSTOM").getMetricsFileName());
     assertEquals("CUSTOM_widgets.json", serviceInfoMap.get("CUSTOM").getWidgetsFileName());
     assertEquals("metrics.json", serviceInfoMap.get("DEFAULT").getMetricsFileName());
     assertEquals("widgets.json", serviceInfoMap.get("DEFAULT").getWidgetsFileName());
@@ -121,108 +121,144 @@ public class ServiceInfoTest {
   }
 
   @Test
-  public void testIsInstallable() throws Exception {
-    String serviceInfoXml = "<metainfo>\n" +
-      "  <schemaVersion>2.0</schemaVersion>\n" +
-      "  <services>\n" +
-      "    <service>\n" +
-      "      <name>INSTALLABLE</name>\n" +
-      "      <displayName>INSTALLABLE</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <installable>true</installable>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>NO_INSTALLABLE</name>\n" +
-      "      <displayName>NO_INSTALLABLE</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <installable>false</installable>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>DEFAULT_INSTALLABLE</name>\n" +
-      "      <displayName>DEFAULT_INSTALLABLE</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "    </service>\n" +
-      "  </services>\n" +
-      "</metainfo>\n";
+  public void testServiceProperties() throws Exception {
+    String serviceInfoXml =
+      "<metainfo>" +
+      "  <schemaVersion>2.0</schemaVersion>" +
+      "  <services>" +
+      "    <service>" +
+      "      <name>WITH_PROPS</name>" +
+      "      <displayName>WITH_PROPS</displayName>" +
+      "      <properties>" +
+      "        <property>" +
+      "          <name>PROP1</name>" +
+      "          <value>VAL1</value>" +
+      "        </property>" +
+      "        <property>" +
+      "          <name>PROP2</name>" +
+      "          <value>VAL2</value>" +
+      "        </property>" +
+      "      </properties>" +
+      "    </service>" +
+      "  </services>" +
+      "</metainfo>";
 
     Map<String, ServiceInfo> serviceInfoMap = getServiceInfo(serviceInfoXml);
 
-    assertTrue(serviceInfoMap.get("INSTALLABLE").isInstallable());
-    assertFalse(serviceInfoMap.get("NO_INSTALLABLE").isInstallable());
-    assertTrue(serviceInfoMap.get("DEFAULT_INSTALLABLE").isInstallable());
+    Map<String, String> serviceProperties = serviceInfoMap.get("WITH_PROPS").getServiceProperties();
+
+    assertTrue(serviceProperties.containsKey("PROP1"));
+    assertEquals("VAL1", serviceProperties.get("PROP1"));
+
+    assertTrue(serviceProperties.containsKey("PROP2"));
+    assertEquals("VAL2", serviceProperties.get("PROP2"));
+
+  }
+
+
+  @Test(expected = DuplicateServicePropertyException.class)
+  public void testDupeServicePropertiesThrowsException() throws Exception{
+    String serviceInfoXml =
+      "<metainfo>" +
+        "  <schemaVersion>2.0</schemaVersion>" +
+        "  <services>" +
+        "    <service>" +
+        "      <name>WITH_PROPS</name>" +
+        "      <displayName>WITH_PROPS</displayName>" +
+        "      <properties>" +
+        "        <property>" +
+        "          <name>PROP1</name>" +
+        "          <value>VAL1</value>" +
+        "        </property>" +
+        "        <property>" +
+        "          <name>PROP1</name>" +
+        "          <value>VAL2</value>" +
+        "        </property>" +
+        "      </properties>" +
+        "    </service>" +
+        "  </services>" +
+        "</metainfo>";
+
+    Map<String, ServiceInfo> serviceInfoMap = getServiceInfo(serviceInfoXml);
+
+    Map<String, String> serviceProperties = serviceInfoMap.get("WITH_PROPS").getServiceProperties();
   }
 
   @Test
-  public void testIsManaged() throws Exception {
-    String serviceInfoXml = "<metainfo>\n" +
-      "  <schemaVersion>2.0</schemaVersion>\n" +
-      "  <services>\n" +
-      "    <service>\n" +
-      "      <name>MANAGED</name>\n" +
-      "      <displayName>MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <managed>true</managed>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>NO_MANAGED</name>\n" +
-      "      <displayName>NO_MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <managed>false</managed>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>DEFAULT_MANAGED</name>\n" +
-      "      <displayName>DEFAULT_MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "    </service>\n" +
-      "  </services>\n" +
-      "</metainfo>\n";
+  public void testDefaultVisibilityServiceProperties() throws Exception {
+    // Given
+    String serviceInfoXml =
+      "<metainfo>" +
+        "  <schemaVersion>2.0</schemaVersion>" +
+        "  <services>" +
+        "    <service>" +
+        "      <name>WITH_PROPS</name>" +
+        "      <displayName>WITH_PROPS</displayName>" +
+        "      <properties>" +
+        "        <property>" +
+        "          <name>PROP1</name>" +
+        "          <value>VAL1</value>" +
+        "        </property>" +
+        "        <property>" +
+        "          <name>PROP2</name>" +
+        "          <value>VAL2</value>" +
+        "        </property>" +
+        "      </properties>" +
+        "    </service>" +
+        "  </services>" +
+        "</metainfo>";
 
+    // When
     Map<String, ServiceInfo> serviceInfoMap = getServiceInfo(serviceInfoXml);
 
-    assertTrue(serviceInfoMap.get("MANAGED").isManaged());
-    assertFalse(serviceInfoMap.get("NO_MANAGED").isManaged());
-    assertTrue(serviceInfoMap.get("DEFAULT_MANAGED").isManaged());
+    // Then
+    Map<String, String> serviceProperties = serviceInfoMap.get("WITH_PROPS").getServiceProperties();
+
+
+    assertTrue("true".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey())));
+    assertTrue("true".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY.getKey())));
+    assertTrue("true".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY.getKey())));
   }
 
   @Test
-  public void testIsMonitored() throws Exception {
-    String serviceInfoXml = "<metainfo>\n" +
-      "  <schemaVersion>2.0</schemaVersion>\n" +
-      "  <services>\n" +
-      "    <service>\n" +
-      "      <name>MONITORED</name>\n" +
-      "      <displayName>MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <monitored>true</monitored>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>NO_MONITORED</name>\n" +
-      "      <displayName>NO_MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "      <monitored>false</monitored>\n" +
-      "    </service>\n" +
-      "    <service>\n" +
-      "      <name>DEFAULT_MONITORED</name>\n" +
-      "      <displayName>DEFAULT_MANAGED</displayName>\n" +
-      "      <comment>Apache Hadoop Distributed File System</comment>\n" +
-      "      <version>2.1.0.2.0</version>\n" +
-      "    </service>\n" +
-      "  </services>\n" +
-      "</metainfo>\n";
+  public void testVisibilityServicePropertyOverride() throws Exception {
+    // Given
+    String serviceInfoXml =
+      "<metainfo>" +
+        "  <schemaVersion>2.0</schemaVersion>" +
+        "  <services>" +
+        "    <service>" +
+        "      <name>WITH_PROPS</name>" +
+        "      <displayName>WITH_PROPS</displayName>" +
+        "      <properties>" +
+        "        <property>" +
+        "          <name>PROP1</name>" +
+        "          <value>VAL1</value>" +
+        "        </property>" +
+        "        <property>" +
+        "          <name>PROP2</name>" +
+        "          <value>VAL2</value>" +
+        "        </property>" +
+        "        <property>" +
+        "          <name>managed</name>" +
+        "          <value>false</value>" +
+        "        </property>" +
+        "      </properties>" +
+        "    </service>" +
+        "  </services>" +
+        "</metainfo>";
 
+    // When
     Map<String, ServiceInfo> serviceInfoMap = getServiceInfo(serviceInfoXml);
 
-    assertTrue(serviceInfoMap.get("MONITORED").isMonitored());
-    assertFalse(serviceInfoMap.get("NO_MONITORED").isMonitored());
-    assertTrue(serviceInfoMap.get("DEFAULT_MONITORED").isMonitored());
+    // Then
+    Map<String, String> serviceProperties = serviceInfoMap.get("WITH_PROPS").getServiceProperties();
+
+
+    assertTrue("true".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey())));
+    assertTrue("false".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY.getKey())));
+    assertTrue("true".equals(serviceProperties.get(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY.getKey())));
+
   }
 
   public static Map<String, ServiceInfo> getServiceInfo(String xml) throws JAXBException {

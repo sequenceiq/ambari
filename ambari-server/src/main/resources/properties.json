@@ -208,9 +208,7 @@
         "StackServices/service_check_supported",
         "StackServices/custom_commands",
         "StackServices/required_services",
-        "StackServices/installable",
-        "StackServices/managed",
-        "StackServices/monitored",
+        "StackServices/properties",
         "_"
     ],
     "StackConfiguration":[

@@ -19,10 +19,9 @@
 package org.apache.ambari.server.controller;
 
 import org.apache.ambari.server.state.ServiceInfo;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 
 
@@ -36,51 +35,13 @@ public class StackServiceResponseTest {
   }
 
   @Test
-  public void testIsInstallableTrue() throws Exception {
-    serviceInfo.setInstallable(true);
+  public void testDefaultServiceVisibilityProperties() throws Exception {
     StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
 
-    assertTrue(stackServiceResponse.isInstallable());
+    assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey())));
+    assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY.getKey())));
+    assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY.getKey())));
   }
 
-  @Test
-  public void testIsInstallableFalse() throws Exception {
-    serviceInfo.setInstallable(false);
-    StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
-
-    assertFalse(stackServiceResponse.isInstallable());
-  }
-
-  @Test
-  public void testIsManagedTrue() throws Exception {
-    serviceInfo.setManaged(true);
-    StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
-
-    assertTrue(stackServiceResponse.isManaged());
-  }
-
-  @Test
-  public void testIsManagedFalse() throws Exception {
-    serviceInfo.setManaged(false);
-    StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
-
-    assertFalse(stackServiceResponse.isManaged());
-  }
-
-  @Test
-  public void testIsMonitoredTrue() throws Exception {
-    serviceInfo.setMonitored(true);
-    StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
-
-    assertTrue(stackServiceResponse.isMonitored());
-  }
-
-  @Test
-  public void testIsMonitoredFalse() throws Exception {
-    serviceInfo.setMonitored(false);
-    StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
-
-    assertFalse(stackServiceResponse.isMonitored());
-  }
 
 }
