@@ -775,7 +775,6 @@ public String getVersion() {
    * @return Service property map
    */
   public Map<String, String> getServiceProperties() throws DuplicateServicePropertyException {
-    if (servicePropertyMap == null) {
       synchronized (this) {
         if (servicePropertyMap == null) {
           Map<String, String> properties = Maps.newHashMap();
@@ -789,10 +788,9 @@ public String getVersion() {
 
           servicePropertyMap = ImmutableMap.copyOf(ensureMandatoryServiceProperties(properties));
         }
-      }
-    }
 
-    return servicePropertyMap;
+        return servicePropertyMap;
+      }
   }
 
   private Map<String, String> ensureMandatoryServiceProperties(Map<String, String> properties) {
@@ -814,6 +812,8 @@ public String getVersion() {
   }
 
   public void setServicePropertyMap(Map<String, String> servicePropertyMap) {
-    this.servicePropertyMap = servicePropertyMap;
+    synchronized (this) {
+      this.servicePropertyMap = servicePropertyMap;
+    }
   }
 }
