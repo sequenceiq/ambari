@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.ambari.server.controller.AmbariManagementController;
-import org.apache.ambari.server.controller.StackServiceRequest;
 import org.apache.ambari.server.controller.StackServiceResponse;
 import org.apache.ambari.server.controller.spi.Request;
 import org.apache.ambari.server.controller.spi.Resource;
@@ -38,8 +37,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+
 
 
 public class StackServiceResourceProviderTest {
@@ -67,14 +71,16 @@ public class StackServiceResourceProviderTest {
   @Test
   public void testGetServiceProperties() throws Exception {
     // Given
-    AmbariManagementController managementController = mock(AmbariManagementController.class);
+    AmbariManagementController managementController = createNiceMock(AmbariManagementController.class);
     Resource.Type type = Resource.Type.StackService;
 
-    StackServiceResponse stackServiceResponse = mock(StackServiceResponse.class);
-    when(stackServiceResponse.getServiceProperties()).thenReturn(TEST_SERVICE_PROPERTIES);
+    StackServiceResponse stackServiceResponse = createNiceMock(StackServiceResponse.class);
+    expect(stackServiceResponse.getServiceProperties()).andReturn(TEST_SERVICE_PROPERTIES);
 
-    when(managementController.getStackServices(anySetOf(StackServiceRequest.class)))
-      .thenReturn(ImmutableSet.of(stackServiceResponse));
+    expect(managementController.getStackServices(anyObject(Set.class)))
+      .andReturn(ImmutableSet.of(stackServiceResponse));
+
+    replay(managementController, stackServiceResponse);
 
     Request request = PropertyHelper.getReadRequest(SERVICE_PROPERTIES_PROPERTY_ID);
 
@@ -93,23 +99,35 @@ public class StackServiceResourceProviderTest {
     BaseProvider.setResourceProperty(expected, SERVICE_PROPERTIES_PROPERTY_ID, TEST_SERVICE_PROPERTIES, ImmutableSet.of(SERVICE_PROPERTIES_PROPERTY_ID));
 
     assertEquals(ImmutableSet.of(expected), resources);
+
+    verify(managementController, stackServiceResponse);
+
   }
 
 
   @Test
   public void testGetVisibilityServiceProperties() throws Exception {
     // Given
-    AmbariManagementController managementController = mock(AmbariManagementController.class);
+    AmbariManagementController managementController = createNiceMock(AmbariManagementController.class);
     Resource.Type type = Resource.Type.StackService;
 
-    ServiceInfo serviceInfo = mock(ServiceInfo.class);
-    when(serviceInfo.getServicePropertyList()).thenReturn(TEST_SERVICE_PROPERTY_LIST);
-    when(serviceInfo.getServiceProperties()).thenCallRealMethod();
+
+
+    ServiceInfo serviceInfo = new ServiceInfo() {
+      @Override
+      public List<ServicePropertyInfo> getServicePropertyList() {
+        return TEST_SERVICE_PROPERTY_LIST;
+      }
+    };
 
     StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
 
-    when(managementController.getStackServices(anySetOf(StackServiceRequest.class)))
-      .thenReturn(ImmutableSet.of(stackServiceResponse));
+
+
+    expect(managementController.getStackServices(anyObject(Set.class)))
+      .andReturn(ImmutableSet.of(stackServiceResponse));
+
+    replay(managementController);
 
     Request request = PropertyHelper.getReadRequest(SERVICE_PROPERTIES_PROPERTY_ID);
 
@@ -132,5 +150,7 @@ public class StackServiceResourceProviderTest {
     BaseProvider.setResourceProperty(expected, SERVICE_PROPERTIES_PROPERTY_ID, expectedServiceProperties, ImmutableSet.of(SERVICE_PROPERTIES_PROPERTY_ID));
 
     assertEquals(ImmutableSet.of(expected), resources);
+
+    verify(managementController);
   }
 }
