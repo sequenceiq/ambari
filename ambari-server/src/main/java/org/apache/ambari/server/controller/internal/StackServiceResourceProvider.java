@@ -25,12 +25,23 @@ import org.apache.ambari.server.StaticallyInject;
 import org.apache.ambari.server.controller.AmbariManagementController;
 import org.apache.ambari.server.controller.StackServiceRequest;
 import org.apache.ambari.server.controller.StackServiceResponse;
-import org.apache.ambari.server.controller.spi.*;
+import org.apache.ambari.server.controller.spi.NoSuchParentResourceException;
+import org.apache.ambari.server.controller.spi.NoSuchResourceException;
+import org.apache.ambari.server.controller.spi.Predicate;
+import org.apache.ambari.server.controller.spi.Request;
+import org.apache.ambari.server.controller.spi.Resource;
 import org.apache.ambari.server.controller.spi.Resource.Type;
+import org.apache.ambari.server.controller.spi.SystemException;
+import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.controller.utilities.PropertyHelper;
 import org.apache.ambari.server.state.kerberos.KerberosServiceDescriptorFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 
 @StaticallyInject
 public class StackServiceResourceProvider extends ReadOnlyResourceProvider {
@@ -75,8 +86,8 @@ public class StackServiceResourceProvider extends ReadOnlyResourceProvider {
     "StackServices", "properties");
 
   private static Set<String> pkPropertyIds = new HashSet<String>(
-      Arrays.asList(new String[] { STACK_NAME_PROPERTY_ID,
-          STACK_VERSION_PROPERTY_ID, SERVICE_NAME_PROPERTY_ID }));
+      Arrays.asList(new String[]{STACK_NAME_PROPERTY_ID,
+        STACK_VERSION_PROPERTY_ID, SERVICE_NAME_PROPERTY_ID}));
 
   /**
    * KerberosServiceDescriptorFactory used to create KerberosServiceDescriptor instances
@@ -93,7 +104,7 @@ public class StackServiceResourceProvider extends ReadOnlyResourceProvider {
   @Override
   public Set<Resource> getResources(Request request, Predicate predicate)
       throws SystemException, UnsupportedPropertyException,
-      NoSuchResourceException, NoSuchParentResourceException {
+    NoSuchResourceException, NoSuchParentResourceException {
 
     final Set<StackServiceRequest> requests = new HashSet<StackServiceRequest>();
 

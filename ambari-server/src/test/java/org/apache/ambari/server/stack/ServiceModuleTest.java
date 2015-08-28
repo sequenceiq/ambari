@@ -18,15 +18,17 @@
 
 package org.apache.ambari.server.stack;
 
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.createStrictMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
-import static org.easymock.EasyMock.anyObject;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import org.apache.ambari.server.AmbariException;
+import org.apache.ambari.server.state.CommandScriptDefinition;
+import org.apache.ambari.server.state.ComponentInfo;
+import org.apache.ambari.server.state.CustomCommandDefinition;
+import org.apache.ambari.server.state.PropertyInfo;
+import org.apache.ambari.server.state.ServiceInfo;
+import org.apache.ambari.server.state.ServiceOsSpecific;
+import org.apache.ambari.server.state.ServicePropertyInfo;
+import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -39,12 +41,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.ambari.server.AmbariException;
-import org.apache.ambari.server.state.*;
-import org.junit.Test;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.createStrictMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * ServiceModule unit tests.
