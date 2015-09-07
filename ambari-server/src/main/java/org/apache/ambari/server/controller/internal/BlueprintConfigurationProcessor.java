@@ -2109,6 +2109,31 @@ public class BlueprintConfigurationProcessor {
       }
 
     }
+
+    addExcludedConfigProperties(configuration, configTypesUpdated, services);
+
+  }
+
+  /**
+   * Adds properties from excluded config files (marked as excluded in service metainfo.xml) like Falcon related properties
+   * from oozie-site.xml defined in FALCON/configuration. (AMBARI-13017)
+   * @param configuration
+   * @param configTypesUpdated
+   * @param services
+   */
+  private void addExcludedConfigProperties(Configuration configuration, Set<String> configTypesUpdated, Collection<String> services) {
+    Stack stack = clusterTopology.getBlueprint().getStack();
+
+    for(String service: services){
+      Set<String> excludedConfigTypes = stack.getExcludedConfigurationTypes(service);
+      for(String configType: excludedConfigTypes) {
+        Map<String, String> configProperties = stack.getConfigurationProperties(service, configType);
+        for(Map.Entry<String, String> entry: configProperties.entrySet()) {
+          LOG.info("ADD property " + configType + " " + entry.getKey() + " " + entry.getValue());
+          ensureProperty(configuration, configType, entry.getKey(), entry.getValue(), configTypesUpdated);
+        }
+      }
+    }
   }
 
   /**

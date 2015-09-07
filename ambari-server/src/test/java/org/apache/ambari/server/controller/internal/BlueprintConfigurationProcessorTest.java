@@ -51,6 +51,7 @@ import org.apache.ambari.server.topology.HostGroup;
 import org.apache.ambari.server.topology.HostGroupImpl;
 import org.apache.ambari.server.topology.HostGroupInfo;
 import org.apache.ambari.server.topology.InvalidTopologyException;
+import org.apache.commons.collections.CollectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -151,6 +152,9 @@ public class BlueprintConfigurationProcessorTest {
     }
 
     expect(stack.getCardinality("MYSQL_SERVER")).andReturn(new Cardinality("0-1")).anyTimes();
+
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
   }
 
   @After
@@ -1190,7 +1194,7 @@ public class BlueprintConfigurationProcessorTest {
     configProcessor.doUpdateForBlueprintExport();
 
     assertEquals("hdfs config property not exported properly",
-        createExportedAddress(expectedPortNum, expectedHostGroupName), hdfsSiteProperties.get("dfs.http.address"));
+      createExportedAddress(expectedPortNum, expectedHostGroupName), hdfsSiteProperties.get("dfs.http.address"));
     assertEquals("hdfs config property not exported properly",
         createExportedAddress(expectedPortNum, expectedHostGroupName), hdfsSiteProperties.get("dfs.https.address"));
     assertEquals("hdfs config property not exported properly",
@@ -1483,9 +1487,9 @@ public class BlueprintConfigurationProcessorTest {
 
     // verify that the oozie properties that can refer to an external DB are not included in the export
     assertFalse("oozie_existing_mysql_host should not have been present in the exported configuration",
-        oozieEnvProperties.containsKey("oozie_existing_mysql_host"));
+      oozieEnvProperties.containsKey("oozie_existing_mysql_host"));
     assertFalse("oozie.service.JPAService.jdbc.url should not have been present in the exported configuration",
-        oozieSiteProperties.containsKey("oozie.service.JPAService.jdbc.url"));
+      oozieSiteProperties.containsKey("oozie.service.JPAService.jdbc.url"));
 
     // verify that oozie-env heapsize properties are not removed from the configuration
     assertEquals("oozie_heapsize should have been included in exported configuration",
@@ -1567,11 +1571,11 @@ public class BlueprintConfigurationProcessorTest {
         createExportedHostName(expectedHostGroupName) + "," + createExportedHostName(expectedHostGroupNameTwo),
         webHCatSiteProperties.get("templeton.zookeeper.hosts"));
     assertEquals("yarn-site zookeeper config not properly exported",
-        createExportedHostName(expectedHostGroupName, expectedPortNumberOne) + "," + createExportedHostName(expectedHostGroupNameTwo, expectedPortNumberTwo),
-        yarnSiteProperties.get("hadoop.registry.zk.quorum"));
+      createExportedHostName(expectedHostGroupName, expectedPortNumberOne) + "," + createExportedHostName(expectedHostGroupNameTwo, expectedPortNumberTwo),
+      yarnSiteProperties.get("hadoop.registry.zk.quorum"));
     assertEquals("slider-client zookeeper config not properly exported",
-        createExportedHostName(expectedHostGroupName, expectedPortNumberOne) + "," + createExportedHostName(expectedHostGroupNameTwo, expectedPortNumberTwo),
-        sliderClientProperties.get("slider.zookeeper.quorum"));
+      createExportedHostName(expectedHostGroupName, expectedPortNumberOne) + "," + createExportedHostName(expectedHostGroupNameTwo, expectedPortNumberTwo),
+      sliderClientProperties.get("slider.zookeeper.quorum"));
     assertEquals("kafka zookeeper config not properly exported",
         createExportedHostName(expectedHostGroupName, expectedPortNumberOne) + "," + createExportedHostName(expectedHostGroupNameTwo, expectedPortNumberTwo),
         kafkaBrokerProperties.get("zookeeper.connect"));
@@ -1728,7 +1732,7 @@ public class BlueprintConfigurationProcessorTest {
     assertEquals("Property was incorrectly exported",
         "%HOSTGROUP::" + expectedHostGroupName + "%", properties.get("storm.zookeeper.servers"));
     assertEquals("Property with undefined host was incorrectly exported",
-        "undefined", properties.get("nimbus.childopts"));
+      "undefined", properties.get("nimbus.childopts"));
     assertEquals("Property with undefined host was incorrectly exported",
         "some other info, undefined, more info" , properties.get("worker.childopts"));
   }
@@ -2458,8 +2462,8 @@ public class BlueprintConfigurationProcessorTest {
     updater.doUpdateForClusterCreate();
 
     assertEquals("Unexpected config update for hive_hostname",
-        expectedPropertyValue,
-        hiveEnvProperties.get("hive_hostname"));
+      expectedPropertyValue,
+      hiveEnvProperties.get("hive_hostname"));
 
     assertEquals("Unexpected config update for hive.metastore.uris",
         expectedMetaStoreURIs,
@@ -2707,7 +2711,7 @@ public class BlueprintConfigurationProcessorTest {
     updater.doUpdateForBlueprintExport();
 
     assertEquals("oozie property not updated correctly",
-        createExportedHostName(expectedHostGroupName, expectedPortNum), oozieSiteProperties.get("oozie.base.url"));
+      createExportedHostName(expectedHostGroupName, expectedPortNum), oozieSiteProperties.get("oozie.base.url"));
     assertEquals("oozie property not updated correctly",
       createExportedHostName(expectedHostGroupName), oozieSiteProperties.get("oozie.authentication.kerberos.principal"));
     assertEquals("oozie property not updated correctly",
@@ -2768,13 +2772,13 @@ public class BlueprintConfigurationProcessorTest {
 
     // verify that the properties with hostname information was correctly preserved
     assertEquals("Yarn Log Server URL was incorrectly updated",
-        "http://" + expectedHostName + ":19888/jobhistory/logs", yarnSiteProperties.get("yarn.log.server.url"));
+      "http://" + expectedHostName + ":19888/jobhistory/logs", yarnSiteProperties.get("yarn.log.server.url"));
     assertEquals("Yarn ResourceManager hostname was incorrectly exported",
-        expectedHostName, yarnSiteProperties.get("yarn.resourcemanager.hostname"));
+      expectedHostName, yarnSiteProperties.get("yarn.resourcemanager.hostname"));
     assertEquals("Yarn ResourceManager tracker address was incorrectly updated",
         createHostAddress(expectedHostName, expectedPortNum), yarnSiteProperties.get("yarn.resourcemanager.resource-tracker.address"));
     assertEquals("Yarn ResourceManager webapp address was incorrectly updated",
-        createHostAddress(expectedHostName, expectedPortNum), yarnSiteProperties.get("yarn.resourcemanager.webapp.address"));
+      createHostAddress(expectedHostName, expectedPortNum), yarnSiteProperties.get("yarn.resourcemanager.webapp.address"));
     assertEquals("Yarn ResourceManager scheduler address was incorrectly updated",
         createHostAddress(expectedHostName, expectedPortNum), yarnSiteProperties.get("yarn.resourcemanager.scheduler.address"));
     assertEquals("Yarn ResourceManager address was incorrectly updated",
@@ -3680,6 +3684,43 @@ public class BlueprintConfigurationProcessorTest {
   }
 
   @Test
+  public void testAddExcludedProperties() throws Exception {
+    reset(stack);
+
+    // defaults from init() method that we need
+    expect(stack.getName()).andReturn("testStack").anyTimes();
+    expect(stack.getVersion()).andReturn("1").anyTimes();
+    expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
+
+    // customized stack calls for this test only
+    expect(stack.getExcludedConfigurationTypes("FALCON")).andReturn(Collections.singleton("oozie-site")).anyTimes();
+    expect(stack.getConfigurationProperties("FALCON", "oozie-site")).andReturn(Collections.singletonMap("oozie.service.ELService.ext.functions.coord-job-submit-instances", "testValue")).anyTimes();
+
+    Map<String, Map<String, String>> properties = new HashMap<String, Map<String, String>>();
+
+    Configuration clusterConfig = new Configuration(properties, Collections.<String, Map<String, Map<String, String>>>emptyMap());
+
+    Collection<String> hgComponents = new HashSet<String>();
+    hgComponents.add("FALCON_SERVER");
+    hgComponents.add("FALCON_CLIENT");
+    List<String> hosts = new ArrayList<String>();
+    hosts.add("c6401.apache.ambari.org");
+    hosts.add("serverTwo");
+    TestHostGroup group1 = new TestHostGroup("host_group_1", hgComponents, hosts);
+
+    Collection<TestHostGroup> hostGroups = new HashSet<TestHostGroup>();
+    hostGroups.add(group1);
+
+    ClusterTopology topology = createClusterTopology(bp, clusterConfig, hostGroups);
+    BlueprintConfigurationProcessor updater = new BlueprintConfigurationProcessor(topology);
+
+    updater.doUpdateForClusterCreate();
+
+    assertEquals("Falcon Broker URL property not properly exported",
+      "testValue", clusterConfig.getPropertyValue("oozie-site", "oozie.service.ELService.ext.functions.coord-job-submit-instances"));
+  }
+
+  @Test
   public void testFalconConfigClusterUpdate() throws Exception {
     final String expectedHostName = "c6401.apache.ambari.org";
     final String expectedPortNum = "808080";
@@ -3853,6 +3894,8 @@ public class BlueprintConfigurationProcessorTest {
     expect(stack.getName()).andReturn("testStack").anyTimes();
     expect(stack.getVersion()).andReturn("1").anyTimes();
     expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
 
     // customized stack calls for this test only
     expect(stack.getServiceForConfigType("hive-site")).andReturn("HIVE").atLeastOnce();
@@ -3928,6 +3971,8 @@ public class BlueprintConfigurationProcessorTest {
     expect(stack.getName()).andReturn("testStack").anyTimes();
     expect(stack.getVersion()).andReturn("1").anyTimes();
     expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
 
     // customized stack calls for this test only
     // simulate the case of the stack object throwing a RuntimeException, to indicate a config error
@@ -4005,6 +4050,8 @@ public class BlueprintConfigurationProcessorTest {
     expect(stack.getName()).andReturn("testStack").anyTimes();
     expect(stack.getVersion()).andReturn("1").anyTimes();
     expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
 
     // customized stack calls for this test only
     expect(stack.getServiceForConfigType("hive-site")).andReturn("HIVE").atLeastOnce();
@@ -4091,7 +4138,10 @@ public class BlueprintConfigurationProcessorTest {
     expect(stack.getVersion()).andReturn("1").anyTimes();
     expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
 
-    // customized stack calls for this test only
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
+
+      // customized stack calls for this test only
     expect(stack.getServiceForConfigType("hbase-site")).andReturn("HBASE").atLeastOnce();
     expect(stack.getConfigurationPropertiesWithMetadata("HBASE", "hbase-site")).andReturn(mapOfMetadata).atLeastOnce();
 
@@ -4156,6 +4206,8 @@ public class BlueprintConfigurationProcessorTest {
     expect(stack.getName()).andReturn("testStack").anyTimes();
     expect(stack.getVersion()).andReturn("1").anyTimes();
     expect(stack.isMasterComponent((String) anyObject())).andReturn(false).anyTimes();
+    Set<String> emptySet = Collections.emptySet();
+    expect(stack.getExcludedConfigurationTypes(anyObject(String.class))).andReturn(emptySet).anyTimes();
 
     // customized stack calls for this test only
     expect(stack.getServiceForConfigType("hbase-site")).andReturn("HBASE").atLeastOnce();
