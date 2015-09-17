@@ -113,12 +113,8 @@ public class StackServiceResourceProviderTest {
 
 
 
-    ServiceInfo serviceInfo = new ServiceInfo() {
-      @Override
-      public List<ServicePropertyInfo> getServicePropertyList() {
-        return TEST_SERVICE_PROPERTY_LIST;
-      }
-    };
+    ServiceInfo serviceInfo = new ServiceInfo() ;
+    serviceInfo.setServicePropertyList(TEST_SERVICE_PROPERTY_LIST);
 
     StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
 

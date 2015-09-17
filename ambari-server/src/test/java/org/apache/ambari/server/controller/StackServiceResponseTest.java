@@ -39,6 +39,7 @@ public class StackServiceResponseTest {
   public void testDefaultServiceVisibilityProperties() {
     StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
 
+
     assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey())));
     assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_MANAGED_PROPERTY.getKey())));
     assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_MONITORED_PROPERTY.getKey())));

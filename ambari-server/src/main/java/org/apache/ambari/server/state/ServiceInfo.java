@@ -149,10 +149,10 @@ public class ServiceInfo implements Validable{
 
 
   @XmlTransient
-  private Map<String, String> servicePropertyMap = null;
+  private Map<String, String> servicePropertyMap = ImmutableMap.copyOf(ensureMandatoryServiceProperties(Maps.<String, String>newHashMap()));
 
   /**
-   * 
+   *
    * @return valid xml flag
    */
   @Override
