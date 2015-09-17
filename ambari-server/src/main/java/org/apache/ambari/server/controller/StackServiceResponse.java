@@ -19,7 +19,6 @@
 package org.apache.ambari.server.controller;
 
 import org.apache.ambari.server.state.CustomCommandDefinition;
-import org.apache.ambari.server.state.DuplicateServicePropertyException;
 import org.apache.ambari.server.state.ServiceInfo;
 
 import java.io.File;
