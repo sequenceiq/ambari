@@ -63,7 +63,7 @@ public class StackServiceResponse {
    * @param service
    *          the service to generate the response from (not {@code null}).
    */
-  public StackServiceResponse(ServiceInfo service) throws DuplicateServicePropertyException {
+  public StackServiceResponse(ServiceInfo service) {
     serviceName = service.getName();
     serviceType = service.getServiceType();
     serviceDisplayName = service.getDisplayName();

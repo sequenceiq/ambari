@@ -18,6 +18,25 @@
 
 package org.apache.ambari.server.state;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import org.apache.ambari.server.api.services.AmbariMetaInfo;
+import org.apache.ambari.server.stack.Validable;
+import org.apache.ambari.server.state.stack.MetricDefinition;
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.map.annotate.JsonFilter;
+
+import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlElements;
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.File;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -29,23 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlElements;
-import javax.xml.bind.annotation.XmlTransient;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.ambari.server.api.services.AmbariMetaInfo;
-import org.apache.ambari.server.stack.Validable;
-import org.apache.ambari.server.state.stack.MetricDefinition;
-import org.apache.commons.collections.keyvalue.DefaultKeyValue;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.map.annotate.JsonFilter;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonFilter("propertiesfilter")
@@ -774,32 +776,40 @@ public String getVersion() {
 
   public void setServicePropertyList(List<ServicePropertyInfo> servicePropertyList) {
     this.servicePropertyList = servicePropertyList;
+    afterServicePropertyListSet();
+  }
+
+  private void afterServicePropertyListSet(){
+    validateServiceProperties();
+    buildServiceProperties();
   }
 
 
   /**
-   * Returns the service properties defined in the xml service definition
-   * as a Map where the keys are the property names and values the property values.
-   * It ensures that missing required service properties are added with default values.
+   * Returns the service properties defined in the xml service definition.
    * @return Service property map
    */
-  public Map<String, String> getServiceProperties() throws DuplicateServicePropertyException {
-      synchronized (this) {
-        if (servicePropertyMap == null) {
-          Map<String, String> properties = Maps.newHashMap();
+  public Map<String, String> getServiceProperties()  {
+    return servicePropertyMap;
+  }
 
-          for (ServicePropertyInfo property: getServicePropertyList()) {
-            if (properties.containsKey(property.getName()))
-              throw new DuplicateServicePropertyException("Duplicate service property with name= " + property.getName() + " in the service definition !");
-
-            properties.put(property.getName(), property.getValue());
-          }
-
-          servicePropertyMap = ImmutableMap.copyOf(ensureMandatoryServiceProperties(properties));
-        }
-
-        return servicePropertyMap;
+  /**
+   * Constructs the map that stores the service properties defined in the xml service definition.
+   * The keys are the property names and values the property values.
+   * It ensures that missing required service properties are added with default values.
+   */
+  private void buildServiceProperties() {
+    if (isValid()) {
+      Map<String, String> properties = Maps.newHashMap();
+      for (ServicePropertyInfo property : getServicePropertyList()) {
+        properties.put(property.getName(), property.getValue());
       }
+      servicePropertyMap = ImmutableMap.copyOf(ensureMandatoryServiceProperties(properties));
+    }
+    else
+      servicePropertyMap = ImmutableMap.of();
+
+
   }
 
   private Map<String, String> ensureMandatoryServiceProperties(Map<String, String> properties) {
@@ -820,9 +830,30 @@ public String getVersion() {
     return properties;
   }
 
-  public void setServicePropertyMap(Map<String, String> servicePropertyMap) {
-    synchronized (this) {
-      this.servicePropertyMap = servicePropertyMap;
+  void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+    afterServicePropertyListSet();
+  }
+
+
+  private void validateServiceProperties() {
+    // Verify if there are duplicate service properties by name
+    Multimap<String, ServicePropertyInfo> servicePropsByName = Multimaps.index(
+      getServicePropertyList(),
+      new Function<ServicePropertyInfo, String>() {
+        @Override
+        public String apply(ServicePropertyInfo servicePropertyInfo) {
+          return servicePropertyInfo.getName();
+        }
+      }
+
+    );
+
+    for (String propertyName: servicePropsByName.keySet()) {
+      if (servicePropsByName.get(propertyName).size() > 1) {
+        setValid(false);
+        setErrors("Duplicate service property with name '" + propertyName + "' found in " + getName() + ":" + getVersion() + " service definition !");
+      }
     }
   }
+
 }

@@ -36,7 +36,7 @@ public class StackServiceResponseTest {
   }
 
   @Test
-  public void testDefaultServiceVisibilityProperties() throws Exception {
+  public void testDefaultServiceVisibilityProperties() {
     StackServiceResponse stackServiceResponse = new StackServiceResponse(serviceInfo);
 
     assertTrue("true".equals(stackServiceResponse.getServiceProperties().get(ServiceInfo.DEFAULT_SERVICE_INSTALLABLE_PROPERTY.getKey())));

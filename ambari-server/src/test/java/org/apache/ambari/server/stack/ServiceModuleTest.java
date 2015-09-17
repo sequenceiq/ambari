@@ -48,6 +48,7 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -945,6 +946,26 @@ public class ServiceModuleTest {
 
     verify(context);
   }
+
+  @Test
+  public void testInvalidServiceInfo() {
+    // Given
+    ServiceInfo serviceInfo = new ServiceInfo();
+    serviceInfo.setName("TEST_SERVICE");
+    serviceInfo.setVersion("1.0.0");
+    serviceInfo.setValid(false);
+    serviceInfo.setErrors("Test error message");
+
+
+    // When
+    ServiceModule serviceModule = createServiceModule(serviceInfo);
+
+    // Then
+    assertFalse("Service module should be invalid due to the service info being invalid !", serviceModule.isValid());
+
+    assertTrue("Service module error collection should contain error message that caused service info being invalid !", serviceModule.getErrors().contains("Test error message"));
+  }
+
 
   @Test
   public void testMergeServicePropertiesInheritFromParent() throws Exception {
