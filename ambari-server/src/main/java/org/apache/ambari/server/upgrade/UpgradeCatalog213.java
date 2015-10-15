@@ -83,6 +83,10 @@ public class UpgradeCatalog213 extends AbstractUpgradeCatalog {
   private static final String KERBEROS_DESCRIPTOR_NAME_COLUMN = "kerberos_descriptor_name";
   private static final String KERBEROS_DESCRIPTOR_COLUMN = "kerberos_descriptor";
 
+  private static final String BLUEPRINT_TABLE = "blueprint";
+  private static final String SECURITY_TYPE_COLUMN = "security_type";
+  private static final String SECURITY_DESCRIPTOR_REF_COLUMN = "security_descriptor_reference";
+
   /**
    * Logger.
    */
@@ -133,6 +137,7 @@ public class UpgradeCatalog213 extends AbstractUpgradeCatalog {
   protected void executeDDLUpdates() throws AmbariException, SQLException {
     executeUpgradeDDLUpdates();
     addKerberosDescriptorTable();
+    executeBlueprintDDLUpdates();
   }
 
   protected void executeUpgradeDDLUpdates() throws AmbariException, SQLException {
@@ -148,9 +153,16 @@ public class UpgradeCatalog213 extends AbstractUpgradeCatalog {
     dbAccessor.createTable(KERBEROS_DESCRIPTOR_TABLE, columns, KERBEROS_DESCRIPTOR_NAME_COLUMN);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  private void executeBlueprintDDLUpdates() throws AmbariException, SQLException {
+    dbAccessor.addColumn(BLUEPRINT_TABLE, new DBAccessor.DBColumnInfo(SECURITY_TYPE_COLUMN,
+      String.class, 32, "NONE", false));
+    dbAccessor.addColumn(BLUEPRINT_TABLE, new DBAccessor.DBColumnInfo(SECURITY_DESCRIPTOR_REF_COLUMN,
+      String.class, null, null, true));
+  }
+
+    /**
+     * {@inheritDoc}
+     */
   @Override
   protected void executePreDMLUpdates() throws AmbariException, SQLException {
     executeUpgradePreDMLUpdates();

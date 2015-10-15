@@ -25,6 +25,7 @@ import org.apache.ambari.server.topology.HostGroupInfo;
 import org.apache.ambari.server.topology.InvalidTopologyTemplateException;
 import org.apache.ambari.server.topology.NoSuchBlueprintException;
 import org.apache.ambari.server.topology.RequiredPasswordValidator;
+import org.apache.ambari.server.topology.SecurityConfiguration;
 import org.apache.ambari.server.topology.TopologyValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,8 +101,10 @@ public class ProvisionClusterRequest extends BaseClusterRequest {
    * Constructor.
    *
    * @param properties  request properties
+   * @param securityConfiguration  security config related properties
    */
-  public ProvisionClusterRequest(Map<String, Object> properties) throws InvalidTopologyTemplateException {
+  public ProvisionClusterRequest(Map<String, Object> properties, SecurityConfiguration securityConfiguration) throws
+    InvalidTopologyTemplateException {
     setClusterName(String.valueOf(properties.get(
         ClusterResourceProvider.CLUSTER_NAME_PROPERTY_ID)));
 
@@ -116,6 +119,8 @@ public class ProvisionClusterRequest extends BaseClusterRequest {
     } catch (NoSuchBlueprintException e) {
       throw new InvalidTopologyTemplateException("The specified blueprint doesn't exist: " + e, e);
     }
+
+    this.securityConfiguration = securityConfiguration;
 
     Configuration configuration = configurationFactory.getConfiguration(
         (Collection<Map<String, String>>) properties.get(CONFIGURATIONS_PROPERTY));
