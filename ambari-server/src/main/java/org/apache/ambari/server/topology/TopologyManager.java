@@ -18,6 +18,30 @@
 
 package org.apache.ambari.server.topology;
 
+import com.google.inject.Singleton;
+import org.apache.ambari.server.AmbariException;
+import org.apache.ambari.server.actionmanager.HostRoleCommand;
+import org.apache.ambari.server.actionmanager.Request;
+import org.apache.ambari.server.controller.RequestStatusResponse;
+import org.apache.ambari.server.controller.internal.ArtifactResourceProvider;
+import org.apache.ambari.server.controller.internal.ProvisionClusterRequest;
+import org.apache.ambari.server.controller.internal.RequestImpl;
+import org.apache.ambari.server.controller.internal.ScaleClusterRequest;
+import org.apache.ambari.server.controller.internal.Stack;
+import org.apache.ambari.server.controller.spi.NoSuchParentResourceException;
+import org.apache.ambari.server.controller.spi.RequestStatus;
+import org.apache.ambari.server.controller.spi.Resource;
+import org.apache.ambari.server.controller.spi.ResourceAlreadyExistsException;
+import org.apache.ambari.server.controller.spi.ResourceProvider;
+import org.apache.ambari.server.controller.spi.SystemException;
+import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
+import org.apache.ambari.server.orm.dao.HostRoleCommandStatusSummaryDTO;
+import org.apache.ambari.server.orm.entities.StageEntity;
+import org.apache.ambari.server.state.SecurityType;
+import org.apache.ambari.server.state.host.HostImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,21 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.apache.ambari.server.AmbariException;
-import org.apache.ambari.server.actionmanager.HostRoleCommand;
-import org.apache.ambari.server.actionmanager.Request;
-import org.apache.ambari.server.controller.RequestStatusResponse;
-import org.apache.ambari.server.controller.internal.ProvisionClusterRequest;
-import org.apache.ambari.server.controller.internal.ScaleClusterRequest;
-import org.apache.ambari.server.controller.internal.Stack;
-import org.apache.ambari.server.orm.dao.HostRoleCommandStatusSummaryDTO;
-import org.apache.ambari.server.orm.entities.StageEntity;
-import org.apache.ambari.server.state.host.HostImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Singleton;
 
 /**
  * Manages all cluster provisioning actions on the cluster topology.
@@ -106,16 +115,21 @@ public class TopologyManager {
     Long provisionId = ambariContext.getNextRequestId();
     ambariContext.createAmbariResources(topology, clusterName);
 
+    SecurityConfiguration securityConfiguration = getSecurity(request);
+    if (securityConfiguration != null && securityConfiguration.getType() == SecurityType.KERBEROS) {
+      submitKerberosDescriptorAsArtifact(clusterName, securityConfiguration.getDescriptor());
+    }
+
     long clusterId = ambariContext.getClusterId(clusterName);
     topology.setClusterId(clusterId);
     request.setClusterId(clusterId);
     // persist request after it has successfully validated
     PersistedTopologyRequest persistedRequest = persistedState.persistTopologyRequest(request);
 
-
     clusterTopologyMap.put(clusterId, topology);
 
     addClusterConfigRequest(topology, new ClusterConfigurationRequest(ambariContext, topology, true));
+
     LogicalRequest logicalRequest = processRequest(persistedRequest, topology, provisionId);
 
     //todo: this should be invoked as part of a generic lifecycle event which could possibly
@@ -123,6 +137,57 @@ public class TopologyManager {
     Stack stack = topology.getBlueprint().getStack();
     ambariContext.persistInstallStateForUI(clusterName, stack.getName(), stack.getVersion());
     return getRequestStatus(logicalRequest.getRequestId());
+  }
+
+  /**
+   * Retrieve security info from Blueprint if missing from Cluster Template request.
+   * @param request
+   * @return
+   */
+  private SecurityConfiguration getSecurity(ProvisionClusterRequest request) {
+    SecurityConfiguration security = request.getSecurityConfiguration();
+    if (security != null) {
+      return security;
+    }
+    return request.getBlueprint().getSecurity();
+  }
+
+  private void submitKerberosDescriptorAsArtifact(String clusterName, String descriptor) {
+
+    ResourceProvider artifactProvider =
+      ambariContext.getClusterController().ensureResourceProvider(Resource.Type.Artifact);
+
+    Map<String, Object> properties = new HashMap<>();
+    properties.put(ArtifactResourceProvider.ARTIFACT_NAME_PROPERTY, "kerberos_descriptor");
+    properties.put("Artifacts/cluster_name", clusterName);
+
+    Map<String, String> requestInfoProps = new HashMap<>();
+    requestInfoProps.put(org.apache.ambari.server.controller.spi.Request.REQUEST_INFO_BODY_PROPERTY,
+      "{\"" + ArtifactResourceProvider.ARTIFACT_DATA_PROPERTY + "\": " + descriptor + "}");
+
+    org.apache.ambari.server.controller.spi.Request request = new RequestImpl(Collections.<String>emptySet(),
+      Collections.singleton(properties), requestInfoProps, null);
+
+    try {
+      RequestStatus status = artifactProvider.createResources(request);
+      try {
+        while (status.getStatus() != RequestStatus.Status.Complete) {
+          LOG.info("Waiting for kerberos_descriptor artifact creation.");
+          Thread.sleep(100);
+        }
+      } catch (InterruptedException e) {
+        LOG.info("Wait for resource creation interrupted!");
+      }
+
+      if (status.getStatus() != RequestStatus.Status.Complete) {
+        throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster!");
+      }
+    } catch (SystemException | UnsupportedPropertyException | NoSuchParentResourceException e) {
+      throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster: " + e);
+    } catch (ResourceAlreadyExistsException e) {
+      throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster as resource already exists.");
+    }
+
   }
 
   public RequestStatusResponse scaleHosts(ScaleClusterRequest request)

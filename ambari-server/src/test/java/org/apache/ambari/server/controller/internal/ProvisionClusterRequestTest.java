@@ -97,9 +97,9 @@ public class ProvisionClusterRequestTest {
     // reset host resource provider expectations to none since we are not specifying a host predicate
     reset(hostResourceProvider);
     replay(hostResourceProvider);
-
     Map<String, Object> properties = createBlueprintRequestPropertiesNameOnly(CLUSTER_NAME, BLUEPRINT_NAME);
-    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties);
+
+    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties, null);
 
     assertEquals(CLUSTER_NAME, provisionClusterRequest.getClusterName());
     assertEquals(TopologyRequest.Type.PROVISION, provisionClusterRequest.getType());
@@ -149,9 +149,9 @@ public class ProvisionClusterRequestTest {
     // reset host resource provider expectations to none since we are not specifying a host predicate
     reset(hostResourceProvider);
     replay(hostResourceProvider);
-
     Map<String, Object> properties = createBlueprintRequestPropertiesCountOnly(CLUSTER_NAME, BLUEPRINT_NAME);
-    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties);
+
+    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties, null);
 
     assertEquals(CLUSTER_NAME, provisionClusterRequest.getClusterName());
     assertEquals(TopologyRequest.Type.PROVISION, provisionClusterRequest.getType());
@@ -203,7 +203,7 @@ public class ProvisionClusterRequestTest {
   @Test
   public void testMultipleGroups() throws Exception {
     Map<String, Object> properties = createBlueprintRequestProperties(CLUSTER_NAME, BLUEPRINT_NAME);
-    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties);
+    ProvisionClusterRequest provisionClusterRequest = new ProvisionClusterRequest(properties, null);
 
     assertEquals(CLUSTER_NAME, provisionClusterRequest.getClusterName());
     assertEquals(TopologyRequest.Type.PROVISION, provisionClusterRequest.getType());
@@ -279,7 +279,7 @@ public class ProvisionClusterRequestTest {
     reset(hostResourceProvider);
     replay(hostResourceProvider);
     // should result in an exception
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   @Test(expected= InvalidTopologyTemplateException.class)
@@ -291,7 +291,7 @@ public class ProvisionClusterRequestTest {
     reset(hostResourceProvider);
     replay(hostResourceProvider);
     // should result in an exception
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   @Test(expected= InvalidTopologyTemplateException.class)
@@ -303,7 +303,7 @@ public class ProvisionClusterRequestTest {
     reset(hostResourceProvider);
     replay(hostResourceProvider);
     // should result in an exception
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   @Test(expected = InvalidTopologyTemplateException.class)
@@ -323,14 +323,14 @@ public class ProvisionClusterRequestTest {
     reset(hostResourceProvider);
     replay(hostResourceProvider);
     // should result in an exception
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   @Test
   public void testGetValidators_noDefaultPassword() throws Exception {
     Map<String, Object> properties = createBlueprintRequestProperties(CLUSTER_NAME, BLUEPRINT_NAME);
     //properties.put("default_password", "pwd");
-    TopologyRequest request = new ProvisionClusterRequest(properties);
+    TopologyRequest request = new ProvisionClusterRequest(properties, null);
     List<TopologyValidator> validators = request.getTopologyValidators();
 
     assertEquals(1, validators.size());
@@ -344,7 +344,7 @@ public class ProvisionClusterRequestTest {
   public void testGetValidators_defaultPassword() throws Exception {
     Map<String, Object> properties = createBlueprintRequestProperties(CLUSTER_NAME, BLUEPRINT_NAME);
     properties.put("default_password", "pwd");
-    TopologyRequest request = new ProvisionClusterRequest(properties);
+    TopologyRequest request = new ProvisionClusterRequest(properties, null);
     List<TopologyValidator> validators = request.getTopologyValidators();
 
     assertEquals(1, validators.size());
@@ -359,11 +359,11 @@ public class ProvisionClusterRequestTest {
     reset(hostResourceProvider);
     // checkPropertyIds() returns invalid property names
     expect(hostResourceProvider.checkPropertyIds(Collections.singleton("Hosts/host_name"))).
-        andReturn(Collections.singleton("Hosts/host_name"));
+      andReturn(Collections.singleton("Hosts/host_name"));
     replay(hostResourceProvider);
 
     // should result in an exception due to invalid property in host predicate
-    new ProvisionClusterRequest(createBlueprintRequestProperties(CLUSTER_NAME, BLUEPRINT_NAME));
+    new ProvisionClusterRequest(createBlueprintRequestProperties(CLUSTER_NAME, BLUEPRINT_NAME), null);
   }
 
   @Test(expected = InvalidTopologyTemplateException.class)
@@ -375,7 +375,7 @@ public class ProvisionClusterRequestTest {
     Map<String, Object> properties = createBlueprintRequestPropertiesNameOnly(CLUSTER_NAME, BLUEPRINT_NAME);
     ((Map) ((List) properties.get("host_groups")).iterator().next()).put("host_count", "5");
     // should result in an exception due to both host name and host count being specified
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   @Test(expected = InvalidTopologyTemplateException.class)
@@ -387,7 +387,7 @@ public class ProvisionClusterRequestTest {
     Map<String, Object> properties = createBlueprintRequestPropertiesNameOnly(CLUSTER_NAME, BLUEPRINT_NAME);
     ((Map) ((List) properties.get("host_groups")).iterator().next()).put("host_predicate", "Hosts/host_name=myTestHost");
     // should result in an exception due to both host name and host count being specified
-    new ProvisionClusterRequest(properties);
+    new ProvisionClusterRequest(properties, null);
   }
 
   public static Map<String, Object> createBlueprintRequestProperties(String clusterName, String blueprintName) {

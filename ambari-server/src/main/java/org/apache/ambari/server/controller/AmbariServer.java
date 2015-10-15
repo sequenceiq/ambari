@@ -19,19 +19,16 @@
 package org.apache.ambari.server.controller;
 
 
-import java.io.File;
-import java.io.IOException;
-import java.net.Authenticator;
-import java.net.BindException;
-import java.net.PasswordAuthentication;
-import java.net.URL;
-import java.util.EnumSet;
-import java.util.Enumeration;
-import java.util.Map;
-
-import javax.crypto.BadPaddingException;
-import javax.servlet.DispatcherType;
-
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.gson.Gson;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Scopes;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+import com.google.inject.persist.Transactional;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.ambari.eventdb.webservice.WorkflowJsonService;
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.StateRecoveryManager;
@@ -98,6 +95,7 @@ import org.apache.ambari.server.security.unsecured.rest.ConnectionInfo;
 import org.apache.ambari.server.state.Clusters;
 import org.apache.ambari.server.topology.AmbariContext;
 import org.apache.ambari.server.topology.BlueprintFactory;
+import org.apache.ambari.server.topology.SecurityConfigurationFactory;
 import org.apache.ambari.server.topology.TopologyManager;
 import org.apache.ambari.server.topology.TopologyRequestFactoryImpl;
 import org.apache.ambari.server.utils.StageUtils;
@@ -112,8 +110,8 @@ import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
@@ -127,16 +125,17 @@ import org.springframework.web.context.request.RequestContextListener;
 import org.springframework.web.context.support.GenericWebApplicationContext;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
-import com.google.common.util.concurrent.ServiceManager;
-import com.google.gson.Gson;
-import com.google.inject.Guice;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Scopes;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
-import com.google.inject.persist.Transactional;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import javax.crypto.BadPaddingException;
+import javax.servlet.DispatcherType;
+import java.io.File;
+import java.io.IOException;
+import java.net.Authenticator;
+import java.net.BindException;
+import java.net.PasswordAuthentication;
+import java.net.URL;
+import java.util.EnumSet;
+import java.util.Enumeration;
+import java.util.Map;
 
 @Singleton
 public class AmbariServer {
@@ -683,10 +682,11 @@ public class AmbariServer {
     StackDefinedPropertyProvider.init(injector);
     AbstractControllerResourceProvider.init(injector.getInstance(ResourceProviderFactory.class));
     BlueprintResourceProvider.init(injector.getInstance(BlueprintFactory.class),
-        injector.getInstance(BlueprintDAO.class), injector.getInstance(Gson.class));
+        injector.getInstance(BlueprintDAO.class), injector.getInstance(SecurityConfigurationFactory.class), injector.getInstance(Gson.class));
     StackDependencyResourceProvider.init(ambariMetaInfo);
     ClusterResourceProvider.init(injector.getInstance(TopologyManager.class),
-        injector.getInstance(TopologyRequestFactoryImpl.class));
+        injector.getInstance(TopologyRequestFactoryImpl.class), injector.getInstance(SecurityConfigurationFactory
+        .class), injector.getInstance(Gson.class));
     HostResourceProvider.setTopologyManager(injector.getInstance(TopologyManager.class));
     BlueprintFactory.init(injector.getInstance(BlueprintDAO.class));
     BaseClusterRequest.init(injector.getInstance(BlueprintFactory.class));
