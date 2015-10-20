@@ -18,12 +18,15 @@
 
 package org.apache.ambari.server.topology;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.actionmanager.HostRoleCommand;
 import org.apache.ambari.server.actionmanager.Request;
+import org.apache.ambari.server.controller.ClusterRequest;
 import org.apache.ambari.server.controller.RequestStatusResponse;
 import org.apache.ambari.server.controller.internal.ArtifactResourceProvider;
+import org.apache.ambari.server.controller.internal.CredentialResourceProvider;
 import org.apache.ambari.server.controller.internal.ProvisionClusterRequest;
 import org.apache.ambari.server.controller.internal.RequestImpl;
 import org.apache.ambari.server.controller.internal.ScaleClusterRequest;
@@ -37,6 +40,8 @@ import org.apache.ambari.server.controller.spi.SystemException;
 import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.orm.dao.HostRoleCommandStatusSummaryDTO;
 import org.apache.ambari.server.orm.entities.StageEntity;
+import org.apache.ambari.server.security.encryption.CredentialStoreService;
+import org.apache.ambari.server.security.encryption.CredentialStoreType;
 import org.apache.ambari.server.state.SecurityType;
 import org.apache.ambari.server.state.host.HostImpl;
 import org.slf4j.Logger;
@@ -81,6 +86,9 @@ public class TopologyManager {
 
   private final Object initializationLock = new Object();
 
+  @Inject
+  private CredentialStoreService credentialStoreService;
+
   /**
    * A boolean not cached thread-local (volatile) to prevent double-checked
    * locking on the synchronized keyword.
@@ -102,6 +110,7 @@ public class TopologyManager {
           replayRequests(persistedState.getAllRequests());
           isInitialized = true;
         }
+
       }
     }
   }
@@ -109,7 +118,7 @@ public class TopologyManager {
   public RequestStatusResponse provisionCluster(ProvisionClusterRequest request) throws InvalidTopologyException, AmbariException {
     ensureInitialized();
     ClusterTopology topology = new ClusterTopologyImpl(ambariContext, request);
-    String clusterName = request.getClusterName();
+    final String clusterName = request.getClusterName();
 
     // get the id prior to creating ambari resources which increments the counter
     Long provisionId = ambariContext.getNextRequestId();
@@ -118,6 +127,7 @@ public class TopologyManager {
     SecurityConfiguration securityConfiguration = getSecurity(request);
     if (securityConfiguration != null && securityConfiguration.getType() == SecurityType.KERBEROS) {
       submitKerberosDescriptorAsArtifact(clusterName, securityConfiguration.getDescriptor());
+      submitCredential(clusterName);
     }
 
     long clusterId = ambariContext.getClusterId(clusterName);
@@ -130,13 +140,75 @@ public class TopologyManager {
 
     addClusterConfigRequest(topology, new ClusterConfigurationRequest(ambariContext, topology, true));
 
+    final Stack stack = topology.getBlueprint().getStack();
+
     LogicalRequest logicalRequest = processRequest(persistedRequest, topology, provisionId);
 
-    //todo: this should be invoked as part of a generic lifecycle event which could possibly
+//    if (request.getSecurityConfiguration().getType() == SecurityType.KERBEROS) {
+//
+//      executor.execute(new Runnable() {
+//        @Override
+//        public void run() {
+//          // submitCredential(clusterName);
+//          setupKerberos(clusterName, stack.getName(), stack.getVersion());
+//        }
+//      });
+//
+//    }
+
+  //todo: this should be invoked as part of a generic lifecycle event which could possibly
     //todo: be tied to cluster state
-    Stack stack = topology.getBlueprint().getStack();
+
     ambariContext.persistInstallStateForUI(clusterName, stack.getName(), stack.getVersion());
     return getRequestStatus(logicalRequest.getRequestId());
+  }
+
+  private void submitCredential(String clusterName) {
+
+    ResourceProvider provider =
+      ambariContext.getClusterController().ensureResourceProvider(Resource.Type.Credential);
+
+    Map<String, Object> properties = new HashMap<>();
+    properties.put(CredentialResourceProvider.CREDENTIAL_CLUSTER_NAME_PROPERTY_ID, clusterName);
+    properties.put(CredentialResourceProvider.CREDENTIAL_ALIAS_PROPERTY_ID, "kdc.admin.credential");
+    properties.put(CredentialResourceProvider.CREDENTIAL_PRINCIPAL_PROPERTY_ID, "admin/admin");
+    properties.put(CredentialResourceProvider.CREDENTIAL_KEY_PROPERTY_ID, "admin");
+    properties.put(CredentialResourceProvider.CREDENTIAL_TYPE_PROPERTY_ID, CredentialStoreType.TEMPORARY.name());
+
+    org.apache.ambari.server.controller.spi.Request request = new RequestImpl(Collections.<String>emptySet(),
+      Collections.singleton(properties), Collections.<String, String>emptyMap(), null);
+
+    try {
+      RequestStatus status = provider.createResources(request);
+      try {
+        while (status.getStatus() != RequestStatus.Status.Complete) {
+          LOG.info("Waiting for kerberos_descriptor artifact creation.");
+          Thread.sleep(100);
+        }
+      } catch (InterruptedException e) {
+        LOG.info("Wait for resource creation interrupted!");
+      }
+
+      if (status.getStatus() != RequestStatus.Status.Complete) {
+        throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster!");
+      }
+    } catch (SystemException | UnsupportedPropertyException | NoSuchParentResourceException e) {
+      throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster: " + e);
+    } catch (ResourceAlreadyExistsException e) {
+      throw new RuntimeException("Failed to attach kerberos_descriptor artifact to cluster as resource already exists.");
+    }
+
+  }
+
+  private void setupKerberos(String clusterName, String stackName, String stackVersion) {
+    String stackInfo = String.format("%s-%s", stackName, stackVersion);
+    ClusterRequest clusterRequest = new ClusterRequest(null, clusterName, "INSTALLED", SecurityType.KERBEROS, stackInfo, null);
+
+    try {
+      ambariContext.getController().updateClusters(Collections.singleton(clusterRequest), null);
+    } catch (AmbariException e) {
+      LOG.error("Unable to set install state for UI", e);
+    }
   }
 
   /**

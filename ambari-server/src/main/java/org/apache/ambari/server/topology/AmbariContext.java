@@ -18,15 +18,6 @@
 
 package org.apache.ambari.server.topology;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.ClusterNotFoundException;
 import org.apache.ambari.server.Role;
@@ -67,6 +58,15 @@ import org.apache.ambari.server.state.StackId;
 import org.apache.ambari.server.state.configgroup.ConfigGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provides topology related information as well as access to the core Ambari functionality.
@@ -144,7 +144,7 @@ public class AmbariContext {
 
   public void createAmbariClusterResource(String clusterName, String stackName, String stackVersion) {
     String stackInfo = String.format("%s-%s", stackName, stackVersion);
-    ClusterRequest clusterRequest = new ClusterRequest(null, clusterName, stackInfo, null);
+    ClusterRequest clusterRequest = new ClusterRequest(null, clusterName, null, SecurityType.KERBEROS, stackInfo, null);
     try {
       getController().createCluster(clusterRequest);
     } catch (AmbariException e) {
