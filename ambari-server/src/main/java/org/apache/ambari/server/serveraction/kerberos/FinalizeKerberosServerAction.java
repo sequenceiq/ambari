@@ -66,7 +66,7 @@ public class FinalizeKerberosServerAction extends KerberosServerAction {
   /**
    * @param requestSharedDataContext a Map to be used a shared data among all ServerActions related
    *                                 to a given request
-   * @return
+   * @returnmc
    * @throws AmbariException
    * @throws InterruptedException
    */

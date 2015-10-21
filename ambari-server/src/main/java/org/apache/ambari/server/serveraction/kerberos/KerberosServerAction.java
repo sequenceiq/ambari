@@ -31,12 +31,12 @@ import org.apache.ambari.server.state.Clusters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.ambari.server.serveraction.kerberos.KerberosIdentityDataFileReader.DATA_FILE_NAME;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.apache.ambari.server.serveraction.kerberos.KerberosIdentityDataFileReader.DATA_FILE_NAME;
 
 /**
  * KerberosServerAction is an abstract class to be implemented by Kerberos-related
@@ -146,6 +146,20 @@ public abstract class KerberosServerAction extends AbstractServerAction {
    */
   @Inject
   private KerberosHelper kerberosHelper;
+
+
+  private static boolean alreadyRun = false;
+
+//  public CommandReport execute(ConcurrentMap<String, Object> requestSharedDataContext) throws
+//    AmbariException, InterruptedException {
+//
+//    if (!alreadyRun) {
+//      alreadyRun = true;
+//      return this.execute(requestSharedDataContext);
+//    }
+//    actionLog.writeStdOut("ALREADY_RUN - Processing Kerberos identities and configurations");
+//    return createCommandReport(0, HostRoleStatus.COMPLETED, "{}", actionLog.getStdOut(), actionLog.getStdErr());
+//  }
 
   /**
    * Given a (command parameter) Map and a property name, attempts to safely retrieve the requested
