@@ -144,17 +144,17 @@ public class TopologyManager {
 
     LogicalRequest logicalRequest = processRequest(persistedRequest, topology, provisionId);
 
-//    if (request.getSecurityConfiguration().getType() == SecurityType.KERBEROS) {
-//
-//      executor.execute(new Runnable() {
-//        @Override
-//        public void run() {
-//          // submitCredential(clusterName);
-//          setupKerberos(clusterName, stack.getName(), stack.getVersion());
-//        }
-//      });
-//
-//    }
+    if (request.getSecurityConfiguration().getType() == SecurityType.KERBEROS) {
+
+      executor.execute(new Runnable() {
+        @Override
+        public void run() {
+          // submitCredential(clusterName);
+          setupKerberos(clusterName, stack.getName(), stack.getVersion());
+        }
+      });
+
+    }
 
   //todo: this should be invoked as part of a generic lifecycle event which could possibly
     //todo: be tied to cluster state

@@ -516,7 +516,7 @@ public class KerberosHelperImpl implements KerberosHelper {
 
     if (schKerberosClients != null) {
       for (ServiceComponentHost sch : schKerberosClients) {
-        if (sch.getState() == State.INSTALLED) {// || sch.getState() == State.INSTALLING) {
+        if (sch.getState() == State.INSTALLED || sch.getState() == State.INSTALLING) {
           hostsWithValidKerberosClient.add(sch.getHostName());
         }
       }

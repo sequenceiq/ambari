@@ -62,7 +62,6 @@ import org.apache.ambari.server.state.HostHealthStatus;
 import org.apache.ambari.server.state.HostHealthStatus.HealthStatus;
 import org.apache.ambari.server.state.HostState;
 import org.apache.ambari.server.state.RepositoryInfo;
-import org.apache.ambari.server.state.SecurityType;
 import org.apache.ambari.server.state.StackId;
 import org.apache.ambari.server.state.configgroup.ConfigGroup;
 import org.apache.ambari.server.state.host.HostFactory;
@@ -231,7 +230,7 @@ public class ClustersImpl implements Clusters {
       clusterEntity.setClusterName(clusterName);
       clusterEntity.setDesiredStack(stackEntity);
       clusterEntity.setResource(resourceEntity);
-      clusterEntity.setSecurityType(SecurityType.KERBEROS);
+     // clusterEntity.setSecurityType(SecurityType.KERBEROS);
 
       try {
         clusterDAO.create(clusterEntity);
