@@ -23,6 +23,7 @@ import org.apache.ambari.server.controller.ConfigurationRequest;
 import org.apache.ambari.server.controller.RequestStatusResponse;
 import org.apache.ambari.server.controller.internal.ProvisionClusterRequest;
 import org.apache.ambari.server.controller.internal.Stack;
+import org.apache.ambari.server.state.SecurityType;
 import org.easymock.Capture;
 import org.junit.After;
 import org.junit.Before;
@@ -50,6 +51,7 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.same;
 import static org.easymock.EasyMock.verify;
+import static org.easymock.EasyMock.isNull;
 
 /**
  * TopologyManager unit tests
@@ -234,7 +236,7 @@ public class TopologyManagerTest {
 
     expect(ambariContext.getPersistedTopologyState()).andReturn(persistedState).anyTimes();
     //todo: don't ignore param
-    ambariContext.createAmbariResources(isA(ClusterTopology.class), eq(CLUSTER_NAME));
+    ambariContext.createAmbariResources(isA(ClusterTopology.class), eq(CLUSTER_NAME), (SecurityType) isNull());
     expectLastCall().once();
     expect(ambariContext.getNextRequestId()).andReturn(1L).once();
     expect(ambariContext.isClusterKerberosEnabled(CLUSTER_ID)).andReturn(false).anyTimes();
