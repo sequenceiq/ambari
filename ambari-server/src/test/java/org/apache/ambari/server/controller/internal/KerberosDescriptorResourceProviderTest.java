@@ -1,7 +1,6 @@
 package org.apache.ambari.server.controller.internal;
 
 import org.apache.ambari.server.controller.spi.Request;
-import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.orm.dao.KerberosDescriptorDAO;
 import org.apache.ambari.server.orm.entities.KerberosDescriptorEntity;
 import org.apache.ambari.server.topology.KerberosDescriptorFactory;
@@ -70,7 +69,7 @@ public class KerberosDescriptorResourceProviderTest {
 
   }
 
-  @Test(expected = UnsupportedPropertyException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testCreateShouldThrowExceptionWhenNoDescriptorProvided() throws Exception {
 
     // GIVEN
@@ -89,7 +88,7 @@ public class KerberosDescriptorResourceProviderTest {
     // exception is thrown
   }
 
-  @Test(expected = UnsupportedPropertyException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testCreateShouldThrowExceptionWhenNoNameProvided() throws Exception {
 
     // GIVEN

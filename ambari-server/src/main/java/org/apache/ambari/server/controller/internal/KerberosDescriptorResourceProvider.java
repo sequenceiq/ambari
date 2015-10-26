@@ -128,11 +128,6 @@ public class KerberosDescriptorResourceProvider extends AbstractControllerResour
     return resources;
   }
 
-  private void toResource(Resource resource, KerberosDescriptorEntity entity, Set<String> requestPropertyIds) {
-    setResourceProperty(resource, KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID, entity.getName(), requestPropertyIds);
-    setResourceProperty(resource, KERBEROS_DESCRIPTOR_TEXT_PROPERTY_ID, entity.getKerberosDescriptorText(), requestPropertyIds);
-  }
-
   @Override
   public RequestStatus updateResources(Request request, Predicate predicate) throws SystemException,
       UnsupportedPropertyException, NoSuchResourceException, NoSuchParentResourceException {
@@ -164,8 +159,7 @@ public class KerberosDescriptorResourceProvider extends AbstractControllerResour
     if (request.getRequestInfoProperties() == null ||
         !request.getRequestInfoProperties().containsKey(Request.REQUEST_INFO_BODY_PROPERTY)) {
       LOGGER.error("Could not find the raw request body in the request: {}", request);
-      throw new UnsupportedPropertyException(Resource.Type.KerberosDescriptor,
-          Collections.singleton(Request.REQUEST_INFO_BODY_PROPERTY));
+      throw new IllegalArgumentException("Could not find property: " + Request.REQUEST_INFO_BODY_PROPERTY);
     }
     return request.getRequestInfoProperties().get(Request.REQUEST_INFO_BODY_PROPERTY);
   }
@@ -173,10 +167,15 @@ public class KerberosDescriptorResourceProvider extends AbstractControllerResour
   private String getNameFromRequest(Request request) throws UnsupportedPropertyException {
     if (request.getProperties() == null || !request.getProperties().iterator().hasNext()) {
       LOGGER.error("There is no {} property id in the request {}", KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID, request);
-      throw new UnsupportedPropertyException(Resource.Type.KerberosDescriptor,
-          Collections.singleton(KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID));
+      throw new IllegalArgumentException("Could not find property: " + KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID);
     }
     return (String) request.getProperties().iterator().next().get(KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID);
   }
+
+  private void toResource(Resource resource, KerberosDescriptorEntity entity, Set<String> requestPropertyIds) {
+    setResourceProperty(resource, KERBEROS_DESCRIPTOR_NAME_PROPERTY_ID, entity.getName(), requestPropertyIds);
+    setResourceProperty(resource, KERBEROS_DESCRIPTOR_TEXT_PROPERTY_ID, entity.getKerberosDescriptorText(), requestPropertyIds);
+  }
+
 
 }
