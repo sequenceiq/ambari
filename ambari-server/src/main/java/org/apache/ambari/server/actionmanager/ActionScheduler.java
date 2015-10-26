@@ -430,25 +430,51 @@ class ActionScheduler implements Runnable {
   }
 
   /**
-   * Returns filtered list of stages following the rule:
-   * 1) remove stages that has the same host. Leave only first stage, the rest that have same host of any operation will be filtered
-   * 2) do not remove stages intersected by host if they have intersection by background command
-   * @param stages
-   * @return
+   * Returns filtered list of stages following the rules:
+   * <ul>
+   * <li>remove stages that has the same host. Leave only first stage, the rest that have same host
+   * of any operation will be filtered</li>
+   * <li>do not remove stages intersected by host if they have intersection by background command</li>
+   * <li>do not remove stages that indicate they contain server-side tasks to be executed on the
+   * Ambari server host - this is obvious if the one of the host names indicates the (abstract)
+   * Ambari server host (see {@link StageUtils#AMBARI_SERVER_HOST})</li>
+   * </ul>
+   *
+   * @param stages the stages to process
+   * @return a list of stages that may be executed in parallel
    */
   private List<Stage> filterParallelPerHostStages(List<Stage> stages) {
     List<Stage> retVal = new ArrayList<Stage>();
     Set<String> affectedHosts = new HashSet<String>();
-    for(Stage s : stages){
+    for(Stage s : stages) {
+      boolean addStage = false;
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("==> Processing stage: {}/{} ({}) for {}", s.getRequestId(), s.getStageId(), s.getRequestContext());
+      }
+
       for (String host : s.getHosts()) {
+        LOG.trace("===> Processing Host {}", host);
+
         if (!affectedHosts.contains(host)) {
-          if(!isStageHasBackgroundCommandsOnly(s, host)){
+          if (!Stage.INTERNAL_HOSTNAME.equalsIgnoreCase(host) && !isStageHasBackgroundCommandsOnly(s, host)) {
+            LOG.trace("====>  Adding host to affected hosts: {}", host);
             affectedHosts.add(host);
           }
-          retVal.add(s);
+
+          addStage = true;
         }
       }
+
+      if (addStage) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("===>  Adding stage to return value: {}/{} ({})", s.getRequestId(), s.getStageId(), s.getRequestContext());
+        }
+
+        retVal.add(s);
+      }
     }
+
     return retVal;
   }
 
