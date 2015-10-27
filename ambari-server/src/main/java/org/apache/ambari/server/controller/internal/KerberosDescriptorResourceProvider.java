@@ -177,5 +177,9 @@ public class KerberosDescriptorResourceProvider extends AbstractControllerResour
     setResourceProperty(resource, KERBEROS_DESCRIPTOR_TEXT_PROPERTY_ID, entity.getKerberosDescriptorText(), requestPropertyIds);
   }
 
-
+  @Override
+  public Set<String> checkPropertyIds(Set<String> propertyIds) {
+    LOGGER.debug("Skipping property id validation for kerberos descriptor resources");
+    return Collections.emptySet();
+  }
 }
