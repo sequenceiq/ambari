@@ -706,7 +706,6 @@ public class AmbariServer {
     ClusterPrivilegeResourceProvider.init(injector.getInstance(ClusterDAO.class));
     AmbariPrivilegeResourceProvider.init(injector.getInstance(ClusterDAO.class));
     ActionManager.setTopologyManager(injector.getInstance(TopologyManager.class));
-    TopologyManager.init(injector.getInstance(StackAdvisorBlueprintProcessor.class));
     StackAdvisorBlueprintProcessor.init(injector.getInstance(StackAdvisorHelper.class));
   }
 

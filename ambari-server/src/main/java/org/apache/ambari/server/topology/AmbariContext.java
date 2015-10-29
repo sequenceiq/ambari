@@ -59,6 +59,7 @@ import org.apache.ambari.server.state.configgroup.ConfigGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -75,7 +76,9 @@ public class AmbariContext {
 
   public enum TaskType {INSTALL, START}
 
-  private static PersistedState persistedState = new PersistedStateImpl();
+  @Inject
+  private PersistedState persistedState;
+
   private static AmbariManagementController controller;
   private static ClusterController clusterController;
   //todo: task id's.  Use existing mechanism for getting next task id sequence
