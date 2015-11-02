@@ -89,6 +89,9 @@ public class UpgradeCatalog212 extends AbstractUpgradeCatalog {
     daoUtils = injector.getInstance(DaoUtils.class);
   }
 
+  protected UpgradeCatalog212() {
+  }
+
   // ----- UpgradeCatalog ----------------------------------------------------
 
   /**
@@ -133,8 +136,13 @@ public class UpgradeCatalog212 extends AbstractUpgradeCatalog {
    */
   @Override
   protected void executePreDMLUpdates() throws AmbariException, SQLException {
-    addClusterIdToTopology();
-    finilizeTopologyDDL();
+    if (dbAccessor.tableHasColumn(TOPOLOGY_REQUEST_TABLE, TOPOLOGY_REQUEST_CLUSTER_NAME_COLUMN)) {
+      addClusterIdToTopology();
+      finilizeTopologyDDL();
+    } else {
+      LOG.debug("The column: [ {} ] has already been dropped from table: [ {} ]. Skipping preDMLUpdate logic.",
+          TOPOLOGY_REQUEST_TABLE, TOPOLOGY_REQUEST_CLUSTER_NAME_COLUMN);
+    }
   }
 
   protected void finilizeTopologyDDL() throws AmbariException, SQLException {
