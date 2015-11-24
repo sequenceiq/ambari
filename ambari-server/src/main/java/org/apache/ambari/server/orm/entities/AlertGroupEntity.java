@@ -315,13 +315,14 @@ public class AlertGroupEntity {
       }
     }
 
-    this.alertTargets = alertTargets;
-
     if (null != alertTargets) {
       for (AlertTargetEntity target : alertTargets) {
         target.addAlertGroup(this);
       }
     }
+
+    this.alertTargets = alertTargets;
+
   }
 
   /**

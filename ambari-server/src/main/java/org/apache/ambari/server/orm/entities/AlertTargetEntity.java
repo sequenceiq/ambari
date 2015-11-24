@@ -89,8 +89,7 @@ public class AlertTargetEntity {
   /**
    * Bi-directional many-to-many association to {@link AlertGroupEntity}
    */
-  @ManyToMany(mappedBy = "alertTargets", cascade = { CascadeType.MERGE,
-      CascadeType.REFRESH })
+  @ManyToMany(mappedBy = "alertTargets")
   private Set<AlertGroupEntity> alertGroups;
 
   /**
@@ -266,16 +265,19 @@ public class AlertTargetEntity {
   public void setAlertGroups(Set<AlertGroupEntity> alertGroups) {
     Set<AlertGroupEntity> groups = getAlertGroups();
     for (AlertGroupEntity group : groups) {
+      //WARNING: this indirectly modifies this.alertGroups!!! - side effect
       group.removeAlertTarget(this);
     }
 
-    this.alertGroups = alertGroups;
-
     if (null != alertGroups) {
       for (AlertGroupEntity group : alertGroups) {
+        //WARNING: this indirectly modifies this.alertGroups!!! - side effect
         group.addAlertTarget(this);
       }
     }
+
+    // switching references - thus EclipseLink detects the change
+    this.alertGroups = alertGroups;
   }
 
   /**
