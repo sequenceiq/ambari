@@ -17,12 +17,9 @@
  */
 package org.apache.ambari.server.orm.entities;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableSet;
+import org.apache.ambari.server.state.AlertState;
+import org.eclipse.persistence.annotations.Noncacheable;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -45,10 +42,12 @@ import javax.persistence.OneToMany;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
 import javax.persistence.TableGenerator;
-
-import org.apache.ambari.server.state.AlertState;
-
-import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * The {@link AlertTargetEntity} class represents audience that will receive
@@ -89,6 +88,7 @@ public class AlertTargetEntity {
   /**
    * Bi-directional many-to-many association to {@link AlertGroupEntity}
    */
+  @Noncacheable
   @ManyToMany(mappedBy = "alertTargets", cascade = { CascadeType.MERGE,
       CascadeType.REFRESH })
   private Set<AlertGroupEntity> alertGroups;
