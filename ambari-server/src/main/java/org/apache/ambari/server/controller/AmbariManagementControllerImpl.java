@@ -591,6 +591,11 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
     persistServiceComponentHosts(requests);
   }
 
+  @Override
+  public KerberosHelper getKerberosHelper() {
+    return kerberosHelper;
+  }
+
   void persistServiceComponentHosts(Set<ServiceComponentHostRequest> requests)
     throws AmbariException {
     Multimap<Cluster, ServiceComponentHost> schMap = ArrayListMultimap.create();
@@ -4471,11 +4476,6 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
   @Override
   public TimelineMetricCacheProvider getTimelineMetricCacheProvider() {
     return injector.getInstance(TimelineMetricCacheProvider.class);
-  }
-
-  @Override
-  public KerberosHelper getKerberosHelper() {
-    return kerberosHelper;
   }
 
   /**
