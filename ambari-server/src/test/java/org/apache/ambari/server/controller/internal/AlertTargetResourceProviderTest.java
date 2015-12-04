@@ -277,7 +277,7 @@ public class AlertTargetResourceProviderTest {
     assertEquals(ALERT_TARGET_TYPE, entity.getNotificationType());
     assertTrue(CollectionPresentationUtils.isJsonsEquals(ALERT_TARGET_PROPS, entity.getProperties()));
     assertEquals(false, entity.isGlobal());
-    assertEquals(3, entity.getAlertGroups().size());
+    assertEquals(3, entity.getAlertGroupTargets().size());
 
     // no alert states were set explicitely in the request, so all should be set
     // by the backend
@@ -510,7 +510,7 @@ public class AlertTargetResourceProviderTest {
     assertTrue(entityCapture.hasCaptured());
 
     AlertTargetEntity entity = entityCapture.getValue();
-    assertEquals(3, entity.getAlertGroups().size());
+    assertEquals(3, entity.getAlertGroupTargets().size());
     verify(m_amc, m_dao);
   }
 

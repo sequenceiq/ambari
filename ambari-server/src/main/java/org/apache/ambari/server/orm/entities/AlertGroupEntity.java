@@ -32,6 +32,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.TableGenerator;
 import javax.persistence.UniqueConstraint;
@@ -82,9 +83,10 @@ public class AlertGroupEntity {
   /**
    * Unidirectional many-to-many association to {@link AlertTargetEntity}
    */
-  @ManyToMany(cascade = { CascadeType.MERGE, CascadeType.REFRESH })
-  @JoinTable(name = "alert_group_target", joinColumns = { @JoinColumn(name = "group_id", nullable = false) }, inverseJoinColumns = { @JoinColumn(name = "target_id", nullable = false) })
-  private Set<AlertTargetEntity> alertTargets;
+  @OneToMany(mappedBy = "alertGroup", cascade = {CascadeType.MERGE, CascadeType.REFRESH, CascadeType.PERSIST,
+      CascadeType.REMOVE}, orphanRemoval = true)
+  @JoinColumn(name = "group_id")
+  private Set<AlertGroupTargetEntity> alertGroupTargets = new HashSet<>();
 
   /**
    * Gets the unique ID of this grouping of alerts.
@@ -256,73 +258,15 @@ public class AlertGroupEntity {
     definition.removeAlertGroup(this);
   }
 
-  /**
-   * Gets an immutable set of the targets that will receive notifications for
-   * alert definitions in this group.
-   *
-   * @return the targets that will be dispatch to for alerts in this group, or
-   *         an empty set if there are none (never {@code null}).
-   */
-  public Set<AlertTargetEntity> getAlertTargets() {
-    if( null == alertTargets ) {
-      return Collections.emptySet();
-    }
 
-    return Collections.unmodifiableSet(alertTargets);
+  public Set<AlertGroupTargetEntity> getAlertGroupTargets() {
+    return alertGroupTargets;
   }
 
-  /**
-   * Adds the specified target to the targets that this group will dispatch to.
-   *
-   * @param alertTarget
-   *          the target to add (not {@code null}).
-   */
-  public void addAlertTarget(AlertTargetEntity alertTarget) {
-    if (null == alertTargets) {
-      alertTargets = new HashSet<AlertTargetEntity>();
-    }
-
-    alertTargets.add(alertTarget);
-    alertTarget.addAlertGroup(this);
+  public void setAlertGroupTargets(Set<AlertGroupTargetEntity> alertGroupTargets) {
+    this.alertGroupTargets = alertGroupTargets;
   }
 
-  /**
-   * Removes the specified target from the targets that this group will dispatch
-   * to.
-   *
-   * @param alertTarget
-   *          the target to remove (not {@code null}).
-   */
-  public void removeAlertTarget(AlertTargetEntity alertTarget) {
-    if (null != alertTargets) {
-      alertTargets.remove(alertTarget);
-    }
-
-    alertTarget.removeAlertGroup(this);
-  }
-
-  /**
-   * Sets all of the targets that will receive notifications for alert
-   * definitions in this group.
-   *
-   * @param alertTargets
-   *          the targets, or {@code null} if there are none.
-   */
-  public void setAlertTargets(Set<AlertTargetEntity> alertTargets) {
-    if (null != this.alertTargets) {
-      for (AlertTargetEntity target : this.alertTargets) {
-        target.removeAlertGroup(this);
-      }
-    }
-
-    this.alertTargets = alertTargets;
-
-    if (null != alertTargets) {
-      for (AlertTargetEntity target : alertTargets) {
-        target.addAlertGroup(this);
-      }
-    }
-  }
 
   /**
    *
@@ -368,5 +312,15 @@ public class AlertGroupEntity {
     buffer.append(", default=").append(isDefault);
     buffer.append("}");
     return buffer.toString();
+  }
+
+  public void setAlertTargets(Set<AlertTargetEntity> targets) {
+    for (AlertTargetEntity alertTarget : targets) {
+      getAlertGroupTargets().add(new AlertGroupTargetEntity(this, alertTarget));
+    }
+  }
+
+  public void addAlertTarget(AlertTargetEntity alertTarget) {
+    getAlertGroupTargets().add(new AlertGroupTargetEntity(this, alertTarget));
   }
 }

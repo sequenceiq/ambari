@@ -23,8 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import junit.framework.Assert;
-
 import org.apache.ambari.server.events.AggregateAlertRecalculateEvent;
 import org.apache.ambari.server.events.AlertEvent;
 import org.apache.ambari.server.events.AlertStateChangeEvent;
@@ -36,9 +34,9 @@ import org.apache.ambari.server.orm.dao.AlertDispatchDAO;
 import org.apache.ambari.server.orm.dao.AlertsDAO;
 import org.apache.ambari.server.orm.entities.AlertDefinitionEntity;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertHistoryEntity;
 import org.apache.ambari.server.orm.entities.AlertNoticeEntity;
-import org.apache.ambari.server.orm.entities.AlertTargetEntity;
 import org.apache.ambari.server.state.Alert;
 import org.apache.ambari.server.state.AlertState;
 import org.apache.ambari.server.utils.EventBusSynchronizer;
@@ -53,6 +51,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.persist.PersistService;
 import com.google.inject.util.Modules;
+
+import junit.framework.Assert;
 
 /**
  * Tests that {@link AlertStateChangeEvent} instances cause
@@ -102,16 +102,16 @@ public class AlertStateChangedEventTest {
    */
   @Test
   public void testAlertNoticeCreationFromEvent() throws Exception {
-    AlertTargetEntity alertTarget = EasyMock.createNiceMock(AlertTargetEntity.class);
+    AlertGroupTargetEntity alertTarget = EasyMock.createNiceMock(AlertGroupTargetEntity.class);
     AlertGroupEntity alertGroup = EasyMock.createMock(AlertGroupEntity.class);
     List<AlertGroupEntity> groups = new ArrayList<AlertGroupEntity>();
-    Set<AlertTargetEntity> targets = new HashSet<AlertTargetEntity>();
+    Set<AlertGroupTargetEntity> targets = new HashSet<AlertGroupTargetEntity>();
 
     targets.add(alertTarget);
     groups.add(alertGroup);
 
-    EasyMock.expect(alertGroup.getAlertTargets()).andReturn(targets).once();
-    EasyMock.expect(alertTarget.getAlertStates()).andReturn(
+    EasyMock.expect(alertGroup.getAlertGroupTargets()).andReturn(targets).once();
+    EasyMock.expect(alertTarget.getAlertTarget().getAlertStates()).andReturn(
         EnumSet.of(AlertState.OK, AlertState.CRITICAL)).atLeastOnce();
 
     EasyMock.expect(
@@ -155,16 +155,16 @@ public class AlertStateChangedEventTest {
    */
   @Test
   public void testAlertNoticeSkippedForTarget() throws Exception {
-    AlertTargetEntity alertTarget = EasyMock.createMock(AlertTargetEntity.class);
+    AlertGroupTargetEntity alertGroupTarget = EasyMock.createMock(AlertGroupTargetEntity.class);
     AlertGroupEntity alertGroup = EasyMock.createMock(AlertGroupEntity.class);
     List<AlertGroupEntity> groups = new ArrayList<AlertGroupEntity>();
-    Set<AlertTargetEntity> targets = new HashSet<AlertTargetEntity>();
+    Set<AlertGroupTargetEntity> targets = new HashSet<AlertGroupTargetEntity>();
 
-    targets.add(alertTarget);
+    targets.add(alertGroupTarget);
     groups.add(alertGroup);
 
-    EasyMock.expect(alertGroup.getAlertTargets()).andReturn(targets).once();
-    EasyMock.expect(alertTarget.getAlertStates()).andReturn(
+    EasyMock.expect(alertGroup.getAlertGroupTargets()).andReturn(targets).once();
+    EasyMock.expect(alertGroupTarget.getAlertTarget().getAlertStates()).andReturn(
         EnumSet.of(AlertState.OK, AlertState.CRITICAL)).atLeastOnce();
 
     EasyMock.expect(
@@ -175,7 +175,7 @@ public class AlertStateChangedEventTest {
 
     // dispatchDao should be strict enough to throw an exception on verify
     // that the create alert notice method was not called
-    EasyMock.replay(alertTarget, alertGroup, dispatchDao);
+    EasyMock.replay(alertGroupTarget, alertGroup, dispatchDao);
 
     AlertDefinitionEntity definition = EasyMock.createNiceMock(AlertDefinitionEntity.class);
     EasyMock.expect(definition.getDefinitionId()).andReturn(1L);

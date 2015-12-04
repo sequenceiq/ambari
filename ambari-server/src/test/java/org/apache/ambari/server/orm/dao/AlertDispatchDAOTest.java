@@ -51,6 +51,7 @@ import org.apache.ambari.server.orm.InMemoryDefaultTestModule;
 import org.apache.ambari.server.orm.OrmTestHelper;
 import org.apache.ambari.server.orm.entities.AlertDefinitionEntity;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertHistoryEntity;
 import org.apache.ambari.server.orm.entities.AlertNoticeEntity;
 import org.apache.ambari.server.orm.entities.AlertTargetEntity;
@@ -66,12 +67,18 @@ import org.apache.ambari.server.state.alert.SourceType;
 import org.apache.ambari.server.utils.EventBusSynchronizer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.persist.PersistService;
+import com.google.inject.persist.UnitOfWork;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests {@link AlertDispatchDAO}.
@@ -259,7 +266,7 @@ public class AlertDispatchDAOTest {
 
     assertEquals(group.getGroupName(), actual.getGroupName());
     assertEquals(group.isDefault(), actual.isDefault());
-    assertEquals(group.getAlertTargets(), actual.getAlertTargets());
+    assertEquals(group.getAlertGroupTargets(), actual.getAlertGroupTargets());
     assertEquals(group.getAlertDefinitions(), actual.getAlertDefinitions());
   }
 
@@ -324,9 +331,9 @@ public class AlertDispatchDAOTest {
     assertEquals(target.getProperties(), actual.getProperties());
     assertEquals(false, actual.isGlobal());
 
-    assertNotNull(actual.getAlertGroups());
-    Iterator<AlertGroupEntity> iterator = actual.getAlertGroups().iterator();
-    AlertGroupEntity actualGroup = iterator.next();
+    assertNotNull(actual.getAlertGroupTargets());
+    Iterator<AlertGroupTargetEntity> iterator = actual.getAlertGroupTargets().iterator();
+    AlertGroupTargetEntity actualGroup = iterator.next();
 
     assertEquals(group, actualGroup);
 
@@ -355,24 +362,24 @@ public class AlertDispatchDAOTest {
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertEquals(0, group.getAlertTargets().size());
+    assertEquals(0, group.getAlertGroupTargets().size());
 
     AlertTargetEntity target = m_helper.createGlobalAlertTarget();
     assertTrue(target.isGlobal());
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertEquals(1, group.getAlertTargets().size());
+    assertEquals(1, group.getAlertGroupTargets().size());
 
     List<AlertGroupEntity> groups = m_dao.findAllGroups();
     target = m_dao.findTargetById(target.getTargetId());
-    assertEquals(groups.size(), target.getAlertGroups().size());
+    assertEquals(groups.size(), target.getAlertGroupTargets().size());
 
     m_dao.remove(target);
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertEquals(0, group.getAlertTargets().size());
+    assertEquals(0, group.getAlertGroupTargets().size());
   }
 
   /**
@@ -391,14 +398,14 @@ public class AlertDispatchDAOTest {
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertEquals(2, group.getAlertTargets().size());
+    assertEquals(2, group.getAlertGroupTargets().size());
 
-    Iterator<AlertTargetEntity> iterator = group.getAlertTargets().iterator();
-    AlertTargetEntity groupTarget1 = iterator.next();
-    AlertTargetEntity groupTarget2 = iterator.next();
+    Iterator<AlertGroupTargetEntity> iterator = group.getAlertGroupTargets().iterator();
+    AlertGroupTargetEntity groupTarget1 = iterator.next();
+    AlertGroupTargetEntity groupTarget2 = iterator.next();
 
-    assertTrue(groupTarget1.isGlobal());
-    assertTrue(groupTarget2.isGlobal());
+    assertTrue(groupTarget1.getAlertTarget().isGlobal());
+    assertTrue(groupTarget2.getAlertTarget().isGlobal());
   }
 
   /**
@@ -415,16 +422,16 @@ public class AlertDispatchDAOTest {
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertNotNull(group.getAlertTargets());
-    assertEquals(0, group.getAlertTargets().size());
+    assertNotNull(group.getAlertGroupTargets());
+    assertEquals(0, group.getAlertGroupTargets().size());
 
     group.addAlertTarget(target);
     m_dao.merge(group);
 
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
-    assertNotNull(group.getAlertTargets());
-    assertEquals(1, group.getAlertTargets().size());
+    assertNotNull(group.getAlertGroupTargets());
+    assertEquals(1, group.getAlertGroupTargets().size());
 
     m_dao.remove(group);
     group = m_dao.findGroupById(group.getGroupId());
@@ -501,13 +508,13 @@ public class AlertDispatchDAOTest {
 
     AlertGroupEntity group = m_helper.createAlertGroup(
         m_cluster.getClusterId(), targets);
-    assertEquals(1, group.getAlertTargets().size());
+    assertEquals(1, group.getAlertGroupTargets().size());
 
     target = m_dao.findTargetById(target.getTargetId());
     m_dao.refresh(target);
 
     assertNotNull(target);
-    assertEquals(1, target.getAlertGroups().size());
+    assertEquals(1, target.getAlertGroupTargets().size());
 
     m_dao.remove(target);
     target = m_dao.findTargetById(target.getTargetId());
@@ -516,7 +523,7 @@ public class AlertDispatchDAOTest {
     group = m_dao.findGroupById(group.getGroupId());
     assertNotNull(group);
 
-    assertEquals(0, group.getAlertTargets().size());
+    assertEquals(0, group.getAlertGroupTargets().size());
   }
 
   /**
@@ -543,13 +550,13 @@ public class AlertDispatchDAOTest {
     assertEquals(groupName + "FOO", group.getGroupName());
     assertEquals(true, group.isDefault());
     assertEquals(0, group.getAlertDefinitions().size());
-    assertEquals(0, group.getAlertTargets().size());
+    assertEquals(0, group.getAlertGroupTargets().size());
 
     group.addAlertTarget(target);
     m_dao.merge(group);
 
     group = m_dao.findGroupById(group.getGroupId());
-    assertEquals(targets, group.getAlertTargets());
+    assertEquals(targets, group.getAlertGroupTargets());
   }
 
   /**
@@ -615,9 +622,9 @@ public class AlertDispatchDAOTest {
     assertEquals(2, groups.size());
 
     group = groups.get(groups.indexOf(group));
-    assertEquals(1, group.getAlertTargets().size());
+    assertEquals(1, group.getAlertGroupTargets().size());
     assertEquals(target.getTargetId(),
-        group.getAlertTargets().iterator().next().getTargetId());
+        group.getAlertGroupTargets().iterator().next().getAlertTarget().getTargetId());
   }
 
   /**

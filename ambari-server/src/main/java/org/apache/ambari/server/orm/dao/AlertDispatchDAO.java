@@ -39,6 +39,7 @@ import org.apache.ambari.server.controller.utilities.PredicateHelper;
 import org.apache.ambari.server.orm.RequiresSession;
 import org.apache.ambari.server.orm.entities.AlertDefinitionEntity;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertNoticeEntity;
 import org.apache.ambari.server.orm.entities.AlertNoticeEntity_;
 import org.apache.ambari.server.orm.entities.AlertTargetEntity;
@@ -442,7 +443,7 @@ public class AlertDispatchDAO {
     List<AlertTargetEntity> targets = findAllGlobalTargets();
     if (!targets.isEmpty()) {
       for (AlertTargetEntity target : targets) {
-        group.addAlertTarget(target);
+        group.getAlertGroupTargets().add(new AlertGroupTargetEntity(group, target));
       }
       entityManagerProvider.get().merge(group);
     }
@@ -583,15 +584,15 @@ public class AlertDispatchDAO {
    */
   @Transactional
   public void create(AlertTargetEntity alertTarget) {
-    entityManagerProvider.get().persist(alertTarget);
 
     if (alertTarget.isGlobal()) {
       List<AlertGroupEntity> groups = findAllGroups();
       for (AlertGroupEntity group : groups) {
-        group.addAlertTarget(alertTarget);
-        merge(group);
+        alertTarget.getAlertGroupTargets().add(new AlertGroupTargetEntity(group, alertTarget));
       }
     }
+
+    entityManagerProvider.get().persist(alertTarget);
   }
 
   /**

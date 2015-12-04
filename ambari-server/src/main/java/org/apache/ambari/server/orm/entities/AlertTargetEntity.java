@@ -18,7 +18,6 @@
 package org.apache.ambari.server.orm.entities;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +29,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -38,17 +36,13 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
-import javax.persistence.ManyToMany;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
-import javax.persistence.PreRemove;
 import javax.persistence.Table;
 import javax.persistence.TableGenerator;
 
 import org.apache.ambari.server.state.AlertState;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * The {@link AlertTargetEntity} class represents audience that will receive
@@ -89,9 +83,11 @@ public class AlertTargetEntity {
   /**
    * Bi-directional many-to-many association to {@link AlertGroupEntity}
    */
-  @ManyToMany(mappedBy = "alertTargets", cascade = { CascadeType.MERGE,
-      CascadeType.REFRESH })
-  private Set<AlertGroupEntity> alertGroups;
+  @OneToMany(orphanRemoval = true, mappedBy = "alertTarget", cascade = {CascadeType.MERGE, CascadeType.REFRESH,
+      CascadeType.PERSIST,
+      CascadeType.REMOVE})
+  @JoinColumn(name = "target_id")
+  private Set<AlertGroupTargetEntity> alertGroupTargets = new HashSet<>();
 
   /**
    * Gets the alert states that this target will be notified for. If this is
@@ -242,55 +238,6 @@ public class AlertTargetEntity {
     this.targetName = targetName;
   }
 
-  /**
-   * Gets an immutable set of the alert groups that this target is associated
-   * with.
-   *
-   * @return the groups that will send to this target when an alert in that
-   *         group is received, or an empty set for none.
-   */
-  public Set<AlertGroupEntity> getAlertGroups() {
-    if (null == alertGroups) {
-      return Collections.emptySet();
-    }
-
-    return ImmutableSet.copyOf(alertGroups);
-  }
-
-  /**
-   * Sets all of the groups that are associated with this target.
-   *
-   * @param alertGroups
-   *          the groups, or {@code null} if there are none.
-   */
-  public void setAlertGroups(Set<AlertGroupEntity> alertGroups) {
-    Set<AlertGroupEntity> groups = getAlertGroups();
-    for (AlertGroupEntity group : groups) {
-      group.removeAlertTarget(this);
-    }
-
-    this.alertGroups = alertGroups;
-
-    if (null != alertGroups) {
-      for (AlertGroupEntity group : alertGroups) {
-        group.addAlertTarget(this);
-      }
-    }
-  }
-
-  /**
-   * Adds the specified alert group to the groups that this target is associated
-   * with. This is used to complement the JPA bidirectional association.
-   *
-   * @param alertGroup
-   */
-  protected void addAlertGroup(AlertGroupEntity alertGroup) {
-    if (null == alertGroups) {
-      alertGroups = new HashSet<AlertGroupEntity>();
-    }
-
-    alertGroups.add(alertGroup);
-  }
 
   /**
    * Removes the specified alert group to the groups that this target is
@@ -300,8 +247,8 @@ public class AlertTargetEntity {
    * @param alertGroup
    */
   protected void removeAlertGroup(AlertGroupEntity alertGroup) {
-    if (null != alertGroups) {
-      alertGroups.remove(alertGroup);
+    if (null != alertGroupTargets) {
+      alertGroupTargets.remove(alertGroup);
     }
   }
 
@@ -328,18 +275,13 @@ public class AlertTargetEntity {
     this.alertNotices = alertNotices;
   }
 
-  /**
-   * Called before {@link EntityManager#remove(Object)} for this entity, removes
-   * the non-owning relationship between targets and groups.
-   */
-  @PreRemove
-  public void preRemove() {
-    Set<AlertGroupEntity> groups = getAlertGroups();
-    if (!groups.isEmpty()) {
-      for (AlertGroupEntity group : groups) {
-        group.removeAlertTarget(this);
-      }
-    }
+
+  public Set<AlertGroupTargetEntity> getAlertGroupTargets() {
+    return alertGroupTargets;
+  }
+
+  public void setAlertGroupTargets(Set<AlertGroupTargetEntity> alertGroupTargets) {
+    this.alertGroupTargets = alertGroupTargets;
   }
 
   /**
@@ -386,5 +328,14 @@ public class AlertTargetEntity {
     buffer.append(", name=").append(targetName);
     buffer.append("}");
     return buffer.toString();
+  }
+
+  public void setAlertGroups(Set<AlertGroupEntity> groups) {
+
+    getAlertGroupTargets().clear();
+
+    for (AlertGroupEntity alertGroupEntity : groups) {
+      getAlertGroupTargets().add(new AlertGroupTargetEntity(alertGroupEntity, this));
+    }
   }
 }

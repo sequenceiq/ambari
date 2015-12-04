@@ -44,6 +44,7 @@ import org.apache.ambari.server.orm.dao.AlertDefinitionDAO;
 import org.apache.ambari.server.orm.dao.AlertDispatchDAO;
 import org.apache.ambari.server.orm.entities.AlertDefinitionEntity;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertTargetEntity;
 import org.apache.ambari.server.state.Cluster;
 import org.apache.ambari.server.state.alert.AlertTarget;
@@ -405,13 +406,13 @@ public class AlertGroupResourceProvider extends
     }
 
     if (BaseProvider.isPropertyRequested(ALERT_GROUP_TARGETS, requestedIds)) {
-      Set<AlertTargetEntity> targetEntities = entity.getAlertTargets();
+      Set<AlertGroupTargetEntity> alertGroupTargetEntities = entity.getAlertGroupTargets();
 
       List<AlertTarget> targets = new ArrayList<AlertTarget>(
-          targetEntities.size());
+          alertGroupTargetEntities.size());
 
-      for (AlertTargetEntity targetEntity : targetEntities) {
-        AlertTarget target = AlertTarget.coerce(targetEntity);
+      for (AlertGroupTargetEntity alertGroupTargetEntity : alertGroupTargetEntities) {
+        AlertTarget target = AlertTarget.coerce(alertGroupTargetEntity.getAlertTarget());
         targets.add(target);
       }
 

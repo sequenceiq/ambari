@@ -42,11 +42,12 @@ import org.apache.ambari.server.controller.spi.ResourceAlreadyExistsException;
 import org.apache.ambari.server.controller.spi.SystemException;
 import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.controller.utilities.PropertyHelper;
-import org.apache.ambari.server.notifications.TargetConfigurationResult;
 import org.apache.ambari.server.notifications.DispatchFactory;
 import org.apache.ambari.server.notifications.NotificationDispatcher;
+import org.apache.ambari.server.notifications.TargetConfigurationResult;
 import org.apache.ambari.server.orm.dao.AlertDispatchDAO;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertTargetEntity;
 import org.apache.ambari.server.state.AlertState;
 import org.apache.ambari.server.state.alert.AlertGroup;
@@ -341,7 +342,7 @@ public class AlertTargetResourceProvider extends
   /**
    * Updates existing {@link AlertTargetEntity}s with the specified properties.
    *
-   * @param requestMaps
+   * @param requestMap
    *          a set of property maps, one map for each entity.
    * @throws AmbariException
    *           if the entity could not be found.
@@ -451,16 +452,16 @@ public class AlertTargetResourceProvider extends
         requestedIds);
 
     if (BaseProvider.isPropertyRequested(ALERT_TARGET_GROUPS, requestedIds)) {
-      Set<AlertGroupEntity> groupEntities = entity.getAlertGroups();
+      Set<AlertGroupTargetEntity> groupEntities = entity.getAlertGroupTargets();
       List<AlertGroup> groups = new ArrayList<AlertGroup>(
           groupEntities.size());
 
-      for (AlertGroupEntity groupEntity : groupEntities) {
+      for (AlertGroupTargetEntity groupEntity : groupEntities) {
         AlertGroup group = new AlertGroup();
-        group.setId(groupEntity.getGroupId());
-        group.setName(groupEntity.getGroupName());
-        group.setClusterName(groupEntity.getClusterId());
-        group.setDefault(groupEntity.isDefault());
+        group.setId(groupEntity.getAlertGroup().getGroupId());
+        group.setName(groupEntity.getAlertGroup().getGroupName());
+        group.setClusterName(groupEntity.getAlertGroup().getClusterId());
+        group.setDefault(groupEntity.getAlertGroup().isDefault());
         groups.add(group);
       }
 

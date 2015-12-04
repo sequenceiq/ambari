@@ -29,6 +29,7 @@ import org.apache.ambari.server.orm.dao.AlertDispatchDAO;
 import org.apache.ambari.server.orm.entities.AlertCurrentEntity;
 import org.apache.ambari.server.orm.entities.AlertDefinitionEntity;
 import org.apache.ambari.server.orm.entities.AlertGroupEntity;
+import org.apache.ambari.server.orm.entities.AlertGroupTargetEntity;
 import org.apache.ambari.server.orm.entities.AlertHistoryEntity;
 import org.apache.ambari.server.orm.entities.AlertNoticeEntity;
 import org.apache.ambari.server.orm.entities.AlertTargetEntity;
@@ -126,19 +127,19 @@ public class AlertStateChangedListener {
     // for each group, determine if there are any targets that need to receive
     // a notification about the alert state change event
     for (AlertGroupEntity group : groups) {
-      Set<AlertTargetEntity> targets = group.getAlertTargets();
-      if (null == targets || targets.size() == 0) {
+      Set<AlertGroupTargetEntity> alertGroupTargets = group.getAlertGroupTargets();
+      if (null == alertGroupTargets || alertGroupTargets.size() == 0) {
         continue;
       }
 
-      for (AlertTargetEntity target : targets) {
-        if (!isAlertTargetInterested(target, history)) {
+      for (AlertGroupTargetEntity alertGroupTargetEntity : alertGroupTargets) {
+        if (!isAlertTargetInterested(alertGroupTargetEntity.getAlertTarget(), history)) {
           continue;
         }
 
         AlertNoticeEntity notice = new AlertNoticeEntity();
         notice.setUuid(UUID.randomUUID().toString());
-        notice.setAlertTarget(target);
+        notice.setAlertTarget(alertGroupTargetEntity.getAlertTarget());
         notice.setAlertHistory(event.getNewHistoricalEntry());
         notice.setNotifyState(NotificationState.PENDING);
         notices.add(notice);

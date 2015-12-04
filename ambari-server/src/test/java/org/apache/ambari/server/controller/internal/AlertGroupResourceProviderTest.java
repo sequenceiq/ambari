@@ -511,7 +511,7 @@ public class AlertGroupResourceProviderTest {
 
     AlertGroupEntity entity = entityCapture.getValue();
     assertEquals(ALERT_GROUP_NAME, entity.getGroupName());
-    assertEquals(2, entity.getAlertTargets().size());
+    assertEquals(2, entity.getAlertGroupTargets().size());
     assertEquals(1, entity.getAlertDefinitions().size());
 
     verify(m_dao, m_definitionDao);

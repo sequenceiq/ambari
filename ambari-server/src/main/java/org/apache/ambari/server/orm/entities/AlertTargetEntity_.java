@@ -35,5 +35,5 @@ public class AlertTargetEntity_ {
   public static volatile SingularAttribute<AlertTargetEntity, String> notificationType;
   public static volatile SingularAttribute<AlertTargetEntity, String> properties;
   public static volatile SingularAttribute<AlertTargetEntity, String> targetName;
-  public static volatile SetAttribute<AlertTargetEntity, AlertGroupEntity> alertGroups;
+  public static volatile SetAttribute<AlertTargetEntity, AlertGroupTargetEntity> alertGroups;
 }
