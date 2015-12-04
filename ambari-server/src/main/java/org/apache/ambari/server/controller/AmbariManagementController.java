@@ -776,5 +776,7 @@ public interface AmbariManagementController {
   Set<StackConfigurationDependencyResponse> getStackConfigurationDependencies(Set<StackConfigurationDependencyRequest> requests) throws AmbariException;
 
   TimelineMetricCacheProvider getTimelineMetricCacheProvider();
+
+  KerberosHelper getKerberosHelper();
 }
 
