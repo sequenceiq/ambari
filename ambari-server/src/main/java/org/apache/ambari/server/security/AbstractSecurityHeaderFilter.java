@@ -18,11 +18,7 @@
 
 package org.apache.ambari.server.security;
 
-import com.google.inject.Inject;
-import org.apache.ambari.server.configuration.Configuration;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -31,7 +27,13 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
+import org.apache.ambari.server.configuration.Configuration;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.inject.Inject;
 
 /**
  * AbstractSecurityHeaderFilter is an abstract class used to help add security-related headers to
@@ -56,6 +58,12 @@ public abstract class AbstractSecurityHeaderFilter implements Filter {
    * The logger.
    */
   private final static Logger LOG = LoggerFactory.getLogger(AbstractSecurityHeaderFilter.class);
+
+  /**
+   * Signals that xframe options have already been set by another filter.
+   * By default this request proper
+   */
+  protected final static String DENY_OVERRIDE_XFRAME_OPTIONS_FLAG = "deny.override.xframe.options.flag";
   /**
    * The Configuration object used to determine how Ambari is configured
    */
@@ -81,6 +89,7 @@ public abstract class AbstractSecurityHeaderFilter implements Filter {
    */
   private String xXSSProtectionHeader = Configuration.HTTP_X_XSS_PROTECTION_HEADER_VALUE_DEFAULT;
 
+
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
     LOG.debug("Initializing {}", this.getClass().getName());
@@ -103,9 +112,9 @@ public abstract class AbstractSecurityHeaderFilter implements Filter {
         httpServletResponse.setHeader(STRICT_TRANSPORT_HEADER, strictTransportSecurity);
       }
 
-      // Conditionally set the X-Frame-Options HTTP response header if a value is supplied
       if (!StringUtils.isEmpty(xFrameOptionsHeader)) {
-        httpServletResponse.setHeader(X_FRAME_OPTIONS_HEADER, xFrameOptionsHeader);
+        // perform filter specific logic related to the X-Frame-Options HTTP response header
+        handleXFrameOptionsHeader(httpServletResponse, xFrameOptionsHeader);
       }
 
       // Conditionally set the X-XSS-Protection HTTP response header if a value is supplied
@@ -116,6 +125,9 @@ public abstract class AbstractSecurityHeaderFilter implements Filter {
 
     filterChain.doFilter(servletRequest, servletResponse);
   }
+
+  protected abstract void handleXFrameOptionsHeader(HttpServletResponse httpServletResponse, String
+      xFrameOptionsHeaderValue);
 
   @Override
   public void destroy() {
@@ -140,4 +152,5 @@ public abstract class AbstractSecurityHeaderFilter implements Filter {
   protected void setxXSSProtectionHeader(String xXSSProtectionHeader) {
     this.xXSSProtectionHeader = xXSSProtectionHeader;
   }
+
 }

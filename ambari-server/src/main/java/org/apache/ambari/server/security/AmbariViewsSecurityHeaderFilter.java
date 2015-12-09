@@ -18,8 +18,11 @@
 
 package org.apache.ambari.server.security;
 
-import com.google.inject.Singleton;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.ambari.server.configuration.Configuration;
+
+import com.google.inject.Singleton;
 
 /**
  * AmbariViewsSecurityHeaderFilter adds security-related headers to HTTP response messages for Ambari Views
@@ -28,10 +31,22 @@ import org.apache.ambari.server.configuration.Configuration;
 public class AmbariViewsSecurityHeaderFilter extends AbstractSecurityHeaderFilter {
 
   @Override
+  protected void handleXFrameOptionsHeader(HttpServletResponse httpServletResponse, String headerValue) {
+    httpServletResponse.setHeader(X_FRAME_OPTIONS_HEADER, headerValue);
+
+    // signal the override setting for subsequent filters
+    // todo use the session
+    httpServletResponse.setHeader(DENY_OVERRIDE_XFRAME_OPTIONS_FLAG, "true");
+  }
+
+
+  @Override
   protected void processConfig(Configuration configuration) {
     setSslEnabled(configuration.getApiSSLAuthentication());
     setStrictTransportSecurity(configuration.getViewsStrictTransportSecurityHTTPResponseHeader());
     setxFrameOptionsHeader(configuration.getViewsXFrameOptionsHTTPResponseHeader());
     setxXSSProtectionHeader(configuration.getViewsXXSSProtectionHTTPResponseHeader());
   }
+
+
 }

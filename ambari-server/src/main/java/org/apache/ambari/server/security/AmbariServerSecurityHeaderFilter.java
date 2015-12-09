@@ -18,8 +18,12 @@
 
 package org.apache.ambari.server.security;
 
-import com.google.inject.Singleton;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.ambari.server.configuration.Configuration;
+import org.apache.commons.lang.StringUtils;
+
+import com.google.inject.Singleton;
 
 /**
  * AmbariServerSecurityHeaderFilter adds security-related headers to HTTP response messages for Ambari Server UI
@@ -34,4 +38,13 @@ public class AmbariServerSecurityHeaderFilter extends AbstractSecurityHeaderFilt
     setxFrameOptionsHeader(configuration.getXFrameOptionsHTTPResponseHeader());
     setxXSSProtectionHeader(configuration.getXXSSProtectionHTTPResponseHeader());
   }
+
+  @Override
+  protected void handleXFrameOptionsHeader(HttpServletResponse httpServletResponse, String headerValue) {
+    if (StringUtils.isEmpty(httpServletResponse.getHeader(DENY_OVERRIDE_XFRAME_OPTIONS_FLAG))) {
+      httpServletResponse.setHeader(X_FRAME_OPTIONS_HEADER, headerValue);
+    }
+    // todo the flag is left in the header! use the session instead?!
+  }
+
 }

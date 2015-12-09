@@ -17,10 +17,24 @@
  */
 package org.apache.ambari.server.controller;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
+import javax.inject.Singleton;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.ambari.server.api.AmbariPersistFilter;
 import org.apache.ambari.server.orm.entities.ViewEntity;
 import org.apache.ambari.server.orm.entities.ViewInstanceEntity;
-import org.apache.ambari.server.security.AmbariViewsSecurityHeaderFilter;
 import org.apache.ambari.server.view.ViewContextImpl;
 import org.apache.ambari.server.view.ViewInstanceHandlerList;
 import org.apache.ambari.server.view.ViewRegistry;
@@ -36,20 +50,6 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.filter.DelegatingFilterProxy;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
-import javax.inject.Singleton;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * An Ambari specific extension of the FailsafeHandlerList that allows for the addition
@@ -93,12 +93,6 @@ public class AmbariHandlerList extends HandlerCollection implements ViewInstance
    */
   @Inject
   DelegatingFilterProxy springSecurityFilter;
-
-  /**
-   * The security header filter - conditionally adds security-related headers to the HTTP response for Ambari Views requests.
-   */
-  @Inject
-  AmbariViewsSecurityHeaderFilter ambariViewsSecurityHeaderFilter;
 
   /**
    * Mapping of view instance entities to handlers.
@@ -241,7 +235,6 @@ public class AmbariHandlerList extends HandlerCollection implements ViewInstance
     webAppContext.setClassLoader(viewInstanceDefinition.getViewEntity().getClassLoader());
     webAppContext.setAttribute(ViewContext.CONTEXT_ATTRIBUTE, new ViewContextImpl(viewInstanceDefinition, viewRegistry));
     webAppContext.setSessionHandler(new SharedSessionHandler(sessionManager));
-    webAppContext.addFilter(new FilterHolder(ambariViewsSecurityHeaderFilter), "/*", AmbariServer.DISPATCHER_TYPES);
     webAppContext.addFilter(new FilterHolder(persistFilter), "/*", AmbariServer.DISPATCHER_TYPES);
     webAppContext.addFilter(new FilterHolder(springSecurityFilter), "/*", AmbariServer.DISPATCHER_TYPES);
     webAppContext.setAllowNullPathInfo(true);

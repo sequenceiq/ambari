@@ -18,11 +18,15 @@
 
 package org.apache.ambari.server.security;
 
-import org.apache.ambari.server.configuration.Configuration;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.ambari.server.configuration.Configuration;
+
+import static org.easymock.EasyMock.expectLastCall;
 
 public class AmbariViewsSecurityHeaderFilterTest extends AbstractSecurityHeaderFilterTest {
 
@@ -48,5 +52,14 @@ public class AmbariViewsSecurityHeaderFilterTest extends AbstractSecurityHeaderF
 
   public AmbariViewsSecurityHeaderFilterTest() {
     super(AmbariViewsSecurityHeaderFilter.class, PROPERTY_NAME_MAP, DEFAULT_PROPERTY_VALUE_MAP);
+  }
+
+  @Override
+  protected void setXFrameOptionsExpectationsOnResponseMock(HttpServletResponse servletResponse, String expectedValue) {
+    servletResponse.setHeader(AbstractSecurityHeaderFilter.X_FRAME_OPTIONS_HEADER, expectedValue);
+    expectLastCall().once();
+
+    servletResponse.setHeader(AbstractSecurityHeaderFilter.DENY_OVERRIDE_XFRAME_OPTIONS_FLAG, "true");
+    expectLastCall().once();
   }
 }
