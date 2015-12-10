@@ -583,7 +583,7 @@ public class KerberosHelperImpl implements KerberosHelper {
 
     if (schKerberosClients != null) {
       for (ServiceComponentHost sch : schKerberosClients) {
-        if (sch.getState() == State.INSTALLED) {
+        if (sch.getState() == State.INSTALLED || sch.getState() == State.INSTALLING || sch.getState() == State.INIT) {
           hostsWithValidKerberosClient.add(sch.getHostName());
         }
       }
@@ -2073,7 +2073,7 @@ public class KerberosHelperImpl implements KerberosHelper {
       Stage stage = createServerActionStage(requestStageContainer.getLastStageId(),
           cluster,
           requestStageContainer.getId(),
-          "Preparing Operations",
+          "Enable Kerberos",
           clusterHostInfoJson,
           "{}",
           hostParamsJson,

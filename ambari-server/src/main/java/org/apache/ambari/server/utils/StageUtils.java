@@ -99,6 +99,7 @@ public class StageUtils {
   static {
     try {
       server_hostname = InetAddress.getLocalHost().getCanonicalHostName().toLowerCase();
+      LOG.info("Ambari sever hostname: " + server_hostname);
     } catch (UnknownHostException e) {
       LOG.warn("Could not find canonical hostname ", e);
       server_hostname = "localhost";

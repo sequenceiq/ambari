@@ -113,9 +113,6 @@ public class TopologyManager {
 
   private final static Logger LOG = LoggerFactory.getLogger(TopologyManager.class);
 
-  public TopologyManager() {
-  }
-
   @Inject
   private void setPersistedState() {
     persistedState = ambariContext.getPersistedTopologyState();
@@ -144,8 +141,10 @@ public class TopologyManager {
     Long provisionId = ambariContext.getNextRequestId();
 
     final Stack stack = topology.getBlueprint().getStack();
+
     boolean configureSecurity = false;
     SecurityConfiguration securityConfiguration = processSecurityConfiguration(request);
+
     if (securityConfiguration != null && securityConfiguration.getType() == SecurityType.KERBEROS) {
       configureSecurity = true;
       addKerberosClient(topology);
@@ -154,18 +153,16 @@ public class TopologyManager {
       topology.getBlueprint().getConfiguration().setParentConfiguration(stack.getConfiguration(topology.getBlueprint
         ().getServices()));
 
-      // create Cluster resource with security_type = KERBEROS, this will trigger cluster Kerberization
-      // upon host install task execution
-      ambariContext.createAmbariResources(topology, clusterName, SecurityType.KERBEROS);
+      ambariContext.createAmbariResources(topology, clusterName, SecurityType.NONE);
       if (securityConfiguration.getDescriptor() != null) {
         submitKerberosDescriptorAsArtifact(clusterName, securityConfiguration.getDescriptor());
       }
-
       Credential credential = request.getCredentialsMap().get(KDC_ADMIN_CREDENTIAL);
       if (credential == null) {
         throw new InvalidTopologyException(KDC_ADMIN_CREDENTIAL + " is missing from request.");
       }
       submitCredential(clusterName, credential);
+
     } else {
       ambariContext.createAmbariResources(topology, clusterName, null);
     }
@@ -189,13 +186,40 @@ public class TopologyManager {
 
     addClusterConfigRequest(topology, new ClusterConfigurationRequest(
       ambariContext, topology, true, stackAdvisorBlueprintProcessor, configureSecurity));
-    LogicalRequest logicalRequest = processRequest(persistedRequest, topology, provisionId);
+
+    LogicalRequest logicalRequest = processRequest(persistedRequest, topology, provisionId, configureSecurity);
 
     //todo: this should be invoked as part of a generic lifecycle event which could possibly
     //todo: be tied to cluster state
 
     ambariContext.persistInstallStateForUI(clusterName, stack.getName(), stack.getVersion());
     return getRequestStatus(logicalRequest.getRequestId());
+  }
+
+
+  private void enableKerberos(final String clusterName, final Stack stack) {
+     executor.execute(new Runnable() {
+       @Override
+       public void run() {
+
+         try {
+           String stackInfo = String.format("%s-%s", stack.getName(), stack.getVersion());
+           final ClusterRequest clusterRequest = new ClusterRequest(null, clusterName, "INSTALLED", SecurityType
+             .KERBEROS, stackInfo, null);
+           RetryHelper.executeWithRetry(new Callable<Object>() {
+             @Override
+             public Object call() throws Exception {
+               AmbariContext.getController().updateClusters(Collections.singleton(clusterRequest), null);
+               return null;
+             }
+           });
+         } catch (AmbariException e) {
+           LOG.error("Unable to set install state for UI", e);
+         }
+
+       }
+     });
+
   }
 
   private void submitCredential(String clusterName, Credential credential) {
@@ -260,7 +284,7 @@ public class TopologyManager {
 
     Map<String, String> requestInfoProps = new HashMap<>();
     requestInfoProps.put(org.apache.ambari.server.controller.spi.Request.REQUEST_INFO_BODY_PROPERTY,
-        "{\"" + ArtifactResourceProvider.ARTIFACT_DATA_PROPERTY + "\": " + descriptor + "}");
+      "{\"" + ArtifactResourceProvider.ARTIFACT_DATA_PROPERTY + "\": " + descriptor + "}");
 
     org.apache.ambari.server.controller.spi.Request request = new RequestImpl(Collections.<String>emptySet(),
         Collections.singleton(properties), requestInfoProps, null);
@@ -307,7 +331,7 @@ public class TopologyManager {
     // this registers/updates all request host groups
     topology.update(request);
     return getRequestStatus(processRequest(persistedRequest, topology,
-      ambariContext.getNextRequestId()).getRequestId());
+      ambariContext.getNextRequestId(), false).getRequestId());
   }
 
   public void onHostRegistered(HostImpl host, boolean associatedWithCluster) {
@@ -332,7 +356,7 @@ public class TopologyManager {
           }
 
           LOG.info("TopologyManager.onHostRegistered: processing accepted host offer for reserved host = {}", hostName);
-          processAcceptedHostOffer(getClusterTopology(request.getClusterId()), response, host);
+          processAcceptedHostOffer(getClusterTopology(request.getClusterId()), response, host, true);
           matchedToRequest = true;
         }
       }
@@ -348,7 +372,7 @@ public class TopologyManager {
               case ACCEPTED:
                 matchedToRequest = true;
                 LOG.info("TopologyManager.onHostRegistered: processing accepted host offer for matched host = {}", hostName);
-                processAcceptedHostOffer(getClusterTopology(request.getClusterId()), hostOfferResponse, host);
+                processAcceptedHostOffer(getClusterTopology(request.getClusterId()), hostOfferResponse, host, true);
                 break;
               case DECLINED_DONE:
                 LOG.info("TopologyManager.onHostRegistered: DECLINED_DONE received for host = {}", hostName);
@@ -478,14 +502,15 @@ public class TopologyManager {
     return hostComponentMap;
   }
 
-  private LogicalRequest processRequest(PersistedTopologyRequest request, ClusterTopology topology, Long requestId)
+  private LogicalRequest processRequest(PersistedTopologyRequest request, ClusterTopology topology, Long requestId,
+                                        boolean configureSecurity)
     throws AmbariException {
 
     LOG.info("TopologyManager.processRequest: Entering");
 
     finalizeTopology(request.getRequest(), topology);
     LogicalRequest logicalRequest = createLogicalRequest(request, topology, requestId);
-
+    List<TopologyTask> topologyStartTaskList = new ArrayList<>();
     boolean requestHostComplete = false;
     //todo: overall synchronization. Currently we have nested synchronization here
 
@@ -525,7 +550,8 @@ public class TopologyManager {
             hostIterator.remove();
             LOG.info("TopologyManager.processRequest: host name = {} was ACCEPTED by LogicalRequest ID = {} , host has been removed from available hosts.",
                 host.getHostName(), logicalRequest.getRequestId());
-            processAcceptedHostOffer(getClusterTopology(logicalRequest.getClusterId()), response, host);
+            topologyStartTaskList.addAll(processAcceptedHostOffer(getClusterTopology(logicalRequest.getClusterId()),
+              response, host, false));
             break;
           case DECLINED_DONE:
             requestHostComplete = true;
@@ -547,6 +573,19 @@ public class TopologyManager {
           outstandingRequests.add(logicalRequest);
         }
       }
+
+      // in case of security config this must be executed before submitting topology START tasks
+      if (configureSecurity) {
+        String clusterName = ambariContext.getClusterName(request.getRequest().getClusterId());
+        final Stack stack = topology.getBlueprint().getStack();
+        enableKerberos(clusterName, stack);
+      }
+      if (!topologyStartTaskList.isEmpty()) {
+        for (TopologyTask startTask : topologyStartTaskList) {
+          startTask.init(topology, ambariContext);
+          executor.execute(startTask);
+        }
+      }
     }
     return logicalRequest;
   }
@@ -555,7 +594,7 @@ public class TopologyManager {
       throws AmbariException {
 
     final LogicalRequest logicalRequest = logicalRequestFactory.createRequest(
-        requestId, request.getRequest(), topology);
+      requestId, request.getRequest(), topology);
 
     RetryHelper.executeWithRetry(new Callable<Object>() {
       @Override
@@ -576,8 +615,10 @@ public class TopologyManager {
     return logicalRequest;
   }
 
-  private void processAcceptedHostOffer(ClusterTopology topology, final HostOfferResponse response, HostImpl host) {
+  private List<TopologyTask> processAcceptedHostOffer(ClusterTopology topology, final HostOfferResponse response,
+                                                      HostImpl host, boolean submitStartTasks) {
     final String hostName = host.getHostName();
+    List<TopologyTask> topologyStartTaskList = new ArrayList<>();
     try {
       topology.addHostToTopology(response.getHostGroupName(), hostName);
     } catch (InvalidTopologyException e) {
@@ -602,17 +643,22 @@ public class TopologyManager {
       throw new RuntimeException(e);
     }
 
-
     LOG.info("TopologyManager.processAcceptedHostOffer: about to execute tasks for host = {}",
         hostName);
 
     for (TopologyTask task : response.getTasks()) {
       LOG.info("Processing accepted host offer for {} which responded {} and task {}",
-          hostName, response.getAnswer(), task.getType());
+        hostName, response.getAnswer(), task.getType());
 
-      task.init(topology, ambariContext);
-      executor.execute(task);
+      if (task.getType() != TopologyTask.Type.START || submitStartTasks) {
+        task.init(topology, ambariContext);
+        executor.execute(task);
+      } else {
+        topologyStartTaskList.add(task);
+      }
     }
+
+    return topologyStartTaskList;
   }
 
   private void replayRequests(Map<ClusterTopology, List<LogicalRequest>> persistedRequests) {

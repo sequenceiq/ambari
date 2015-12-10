@@ -47,6 +47,7 @@ import java.util.Set;
 public class ClusterConfigurationRequest {
 
   protected final static Logger LOG = LoggerFactory.getLogger(ClusterConfigurationRequest.class);
+  public static final String CLUSTER_ENV_CONFIG_TYPE_NAME = "cluster-env";
 
   private AmbariContext ambariContext;
   private ClusterTopology clusterTopology;
@@ -121,7 +122,7 @@ public class ClusterConfigurationRequest {
           clusterConfiguration.setProperty(configType, property, propertyMap.get(property));
        }
      }
-
+      clusterConfiguration.setProperty(CLUSTER_ENV_CONFIG_TYPE_NAME, "security_enabled", "true");
     } catch (KerberosInvalidConfigurationException e) {
       LOG.error("An exception occurred while doing Kerberos related configuration update: " + e, e);
     }
