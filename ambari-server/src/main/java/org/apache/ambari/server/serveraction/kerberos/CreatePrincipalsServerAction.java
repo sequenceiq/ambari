@@ -201,6 +201,7 @@ public class CreatePrincipalsServerAction extends KerberosServerAction {
         if (keyNumber != null) {
           message = String.format("Successfully set password for %s", principal);
           LOG.debug(message);
+          result = new CreatePrincipalResult(principal, password, keyNumber);
         } else {
           message = String.format("Failed to set password for %s - unknown reason", principal);
           LOG.error(message);
