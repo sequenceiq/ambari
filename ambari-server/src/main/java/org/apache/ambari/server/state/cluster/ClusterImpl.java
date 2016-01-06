@@ -54,6 +54,9 @@ import org.apache.ambari.server.controller.ConfigurationResponse;
 import org.apache.ambari.server.controller.MaintenanceStateHelper;
 import org.apache.ambari.server.controller.RootServiceResponseFactory.Services;
 import org.apache.ambari.server.controller.ServiceConfigVersionResponse;
+import org.apache.ambari.server.events.AmbariEvent.AmbariEventType;
+import org.apache.ambari.server.events.ClusterEvent;
+import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.orm.RequiresSession;
 import org.apache.ambari.server.orm.cache.HostConfigMapping;
 import org.apache.ambari.server.orm.dao.AlertDefinitionDAO;
@@ -268,6 +271,12 @@ public class ClusterImpl implements Cluster {
   private volatile boolean svcHostsLoaded = false;
 
   private volatile Multimap<String, String> serviceConfigTypes;
+
+  /**
+   * Used to publish events relating to cluster CRUD operations.
+   */
+  @Inject
+  private AmbariEventPublisher eventPublisher;
 
 
   @Inject
@@ -641,7 +650,9 @@ public class ClusterImpl implements Cluster {
 
   @Override
   public void setClusterName(String clusterName) {
+
     clusterGlobalLock.writeLock().lock();
+
     try {
       ClusterEntity clusterEntity = getClusterEntity();
       if (clusterEntity != null) {
@@ -652,10 +663,18 @@ public class ClusterImpl implements Cluster {
         clusterEntity = clusterDAO.merge(clusterEntity);
         clusters.updateClusterName(oldName, clusterName);
         this.clusterName = clusterName;
+
+        // if the name changed, fire an event
+        if (!StringUtils.equals(oldName, clusterName)) {
+          ClusterEvent clusterNameChangedEvent = new ClusterEvent(AmbariEventType.CLUSTER_RENAME, clusterId);
+          eventPublisher.publish(clusterNameChangedEvent);
+        }
+
       }
     } finally {
       clusterGlobalLock.writeLock().unlock();
     }
+
   }
 
   @Override

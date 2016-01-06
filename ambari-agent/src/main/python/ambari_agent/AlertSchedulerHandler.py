@@ -59,6 +59,10 @@ class AlertSchedulerHandler():
     # the amount of time, in seconds, that an alert can run after it's scheduled time
     alert_grace_period = int(config.get('agent', 'alert_grace_period', 5))
 
+
+    # a mapping between a cluster name and a unique hash for all definitions
+    self._cluster_hashes = {}
+
     if not os.path.exists(cachedir):
       try:
         os.makedirs(cachedir)
@@ -114,8 +118,17 @@ class AlertSchedulerHandler():
     with open(os.path.join(self.cachedir, self.FILENAME), 'w') as f:
       json.dump(alert_definitions, f, indent=2)
 
-    # reschedule only the jobs that have changed
-    self.reschedule()
+    # determine how to reschedule the jobs
+    reschedule_all = False
+    if "clusterName" in command_copy and command_copy["clusterName"] not in self._cluster_hashes:
+      reschedule_all = True
+
+    if reschedule_all is True:
+      # reschedule all jobs, creating new instances
+      self.reschedule_all()
+    else:
+      # reschedule only the jobs that have changed
+      self.reschedule()
 
 
   def __make_function(self, alert_def):
@@ -173,7 +186,7 @@ class AlertSchedulerHandler():
           break
 
       # jobs without valid UUIDs should be unscheduled
-      if uuid_valid == False:
+      if uuid_valid is False:
         jobs_removed += 1
         logger.info("[AlertScheduler] Unscheduling {0}".format(scheduled_job.name))
         self._collector.remove_by_uuid(scheduled_job.name)
@@ -189,7 +202,7 @@ class AlertSchedulerHandler():
           break
 
       # if no jobs are found with the definitions UUID, schedule it
-      if definition_scheduled == False:
+      if definition_scheduled is False:
         jobs_scheduled += 1
         self.schedule_definition(definition)
 
@@ -202,6 +215,8 @@ class AlertSchedulerHandler():
     Removes jobs that are scheduled where their UUID no longer is valid.
     Schedules jobs where the definition UUID is not currently scheduled.
     """
+    logger.info("[AlertScheduler] Rescheduling all jobs...")
+
     jobs_scheduled = 0
     jobs_removed = 0
 
@@ -210,18 +225,18 @@ class AlertSchedulerHandler():
 
     # unschedule all scheduled jobs
     for scheduled_job in scheduled_jobs:
-        jobs_removed += 1
-        logger.info("[AlertScheduler] Unscheduling {0}".format(scheduled_job.name))
-        self._collector.remove_by_uuid(scheduled_job.name)
-        self.__scheduler.unschedule_job(scheduled_job)
+      jobs_removed += 1
+      logger.info("[AlertScheduler] Unscheduling {0}".format(scheduled_job.name))
+      self._collector.remove_by_uuid(scheduled_job.name)
+      self.__scheduler.unschedule_job(scheduled_job)
 
     # for every definition, schedule a job
     for definition in definitions:
-        jobs_scheduled += 1
-        self.schedule_definition(definition)
+      jobs_scheduled += 1
+      self.schedule_definition(definition)
 
-    logger.info("[AlertScheduler] Reschedule Summary: {0} rescheduled, {1} unscheduled".format(
-      str(jobs_scheduled), str(jobs_removed)))
+    logger.info("[AlertScheduler] Reschedule Summary: {0} unscheduled, {0} rescheduled".format(
+      str(jobs_removed), str(jobs_scheduled)))
 
 
   def collector(self):
@@ -232,12 +247,11 @@ class AlertSchedulerHandler():
   def __load_definitions(self):
     """
     Loads all alert definitions from a file. All clusters are stored in
-    a single file.
+    a single file. This wil also populate the cluster-to-hash dictionary.
     :return:
     """
     definitions = []
 
-    all_commands = None
     alerts_definitions_path = os.path.join(self.cachedir, self.FILENAME)
     try:
       with open(alerts_definitions_path) as fp:
@@ -249,6 +263,12 @@ class AlertSchedulerHandler():
     for command_json in all_commands:
       clusterName = '' if not 'clusterName' in command_json else command_json['clusterName']
       hostName = '' if not 'hostName' in command_json else command_json['hostName']
+      clusterHash = None if not 'hash' in command_json else command_json['hash']
+
+      # cache the cluster and cluster hash after loading the JSON
+      if clusterName != '' and clusterHash is not None:
+        logger.info('[AlertScheduler] Caching cluster {0} with alert hash {1}'.format(clusterName, clusterHash))
+        self._cluster_hashes[clusterName] = clusterHash
 
       for definition in command_json['alertDefinitions']:
         alert = self.__json_to_callable(clusterName, hostName, definition)

@@ -105,7 +105,13 @@ public abstract class AmbariEvent {
     /**
      * Sent when request finishes
      */
-    REQUEST_FINISHED
+    REQUEST_FINISHED,
+
+    /**
+     * The cluster was renamed.
+     */
+    CLUSTER_RENAME;
+
   }
 
   /**
@@ -130,5 +136,16 @@ public abstract class AmbariEvent {
    */
   public AmbariEventType getType() {
     return m_eventType;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public String toString() {
+    StringBuilder buffer = new StringBuilder(getClass().getSimpleName());
+    buffer.append("{eventType=").append(m_eventType);
+    buffer.append("}");
+    return buffer.toString();
   }
 }
