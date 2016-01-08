@@ -580,6 +580,10 @@ public class TopologyManager {
     final String hostName = host.getHostName();
     try {
       topology.addHostToTopology(response.getHostGroupName(), hostName);
+
+      // update the host with the rack info if applicable
+      updateHostWithRackInfo(topology, response, host);
+
     } catch (InvalidTopologyException e) {
       // host already registered
       throw new RuntimeException("An internal error occurred while performing request host registration: " + e, e);
@@ -612,6 +616,17 @@ public class TopologyManager {
 
       task.init(topology, ambariContext);
       executor.execute(task);
+    }
+  }
+
+  private void updateHostWithRackInfo(ClusterTopology topology, HostOfferResponse response, HostImpl host) {
+    // the rack info from the cluster creation template
+    String rackInfoFromTemplate = topology.getHostGroupInfo().get(response.getHostGroupName()).getHostRackInfo().get
+        (host.getHostName());
+
+    if (null != rackInfoFromTemplate) {
+      host.setRackInfo(rackInfoFromTemplate);
+      host.persist();
     }
   }
 
