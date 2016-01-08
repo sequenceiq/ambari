@@ -327,6 +327,31 @@ public class LogicalRequest extends Request {
     return summaryMap;
   }
 
+  /**
+   * Removes all HostRequest associated with the passed host name
+   * @param hostName name of the host
+   */
+  public void removeHostRequestByHostName(String hostName) {
+    synchronized (requestsWithReservedHosts) {
+      requestsWithReservedHosts.remove(hostName);
+    }
+
+    synchronized (outstandingHostRequests) {
+      Iterator<HostRequest> hostRequestIterator = outstandingHostRequests.iterator();
+      while (hostRequestIterator.hasNext()) {
+        if (hostRequestIterator.next().getHostName().equals(hostName)) {
+          hostRequestIterator.remove();
+          break;
+        }
+      }
+    }
+
+    allHostRequests.clear();
+    allHostRequests.addAll(outstandingHostRequests);
+    allHostRequests.addAll(requestsWithReservedHosts.values());
+
+  }
+
   private void createHostRequests(TopologyRequest request, ClusterTopology topology) {
     Map<String, HostGroupInfo> hostGroupInfoMap = request.getHostGroupInfo();
     Blueprint blueprint = topology.getBlueprint();
