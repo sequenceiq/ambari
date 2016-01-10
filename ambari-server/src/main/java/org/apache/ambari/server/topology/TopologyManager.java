@@ -627,6 +627,13 @@ public class TopologyManager {
     if (null != rackInfoFromTemplate) {
       host.setRackInfo(rackInfoFromTemplate);
       host.persist();
+      try {
+        // todo: do we need this in case of blueprints?
+        ambariContext.getController().registerRackChange(ambariContext.getClusterName(topology.getClusterId()));
+      } catch (AmbariException e) {
+        LOG.error("Could not register rack change for cluster id {}", topology.getClusterId());
+        LOG.error("Exception during rack change: ", e);
+      }
     }
   }
 
