@@ -67,7 +67,7 @@ CLIENT_SECURITY_KEY = "client.security"
 SERVER_API_LDAP_URL = 'ldap_sync_events'
 
 
-def read_master_key(isReset=False):
+def read_master_key(isReset=False, options = None):
   passwordPattern = ".*"
   passwordPrompt = "Please provide master key for locking the credential store: "
   passwordDescr = "Invalid characters in password. Use only alphanumeric or "\
@@ -78,15 +78,15 @@ def read_master_key(isReset=False):
 
   input = True
   while(input):
-    masterKey = get_validated_string_input(passwordPrompt, passwordDefault,
-                              passwordPattern, passwordDescr, True, True)
+    masterKey = options.master_key if options is not None and options.master_key is not None and options.master_key else \
+      get_validated_string_input(passwordPrompt, passwordDefault, passwordPattern, passwordDescr, True, True)
 
     if not masterKey:
       print "Master Key cannot be empty!"
       continue
 
-    masterKey2 = get_validated_string_input("Re-enter master key: ",
-        passwordDefault, passwordPattern, passwordDescr, True, True)
+    masterKey2 = options.master_key if options is not None and options.master_key is not None and options.master_key else \
+      get_validated_string_input("Re-enter master key: ", passwordDefault, passwordPattern, passwordDescr, True, True)
 
     if masterKey != masterKey2:
       print "Master key did not match!"
@@ -184,14 +184,13 @@ def adjust_directory_permissions(ambari_user):
     print_info_msg("Changing ownership: {0} {1} {2}".format(path, user, recursive))
     change_owner(path, user, recursive)
 
-def configure_ldap_password():
+def configure_ldap_password(options):
   passwordDefault = ""
   passwordPrompt = 'Enter Manager Password* : '
   passwordPattern = ".*"
   passwordDescr = "Invalid characters in password."
-
-  password = read_password(passwordDefault, passwordPattern, passwordPrompt,
-    passwordDescr)
+  password = options.ldap_manager_password if options.ldap_manager_password is not None else \
+    read_password(passwordDefault, passwordPattern, passwordPrompt, passwordDescr)
 
   return password
 
@@ -238,6 +237,16 @@ class LdapSyncOptions:
     except AttributeError:
       self.ldap_sync_groups = None
 
+    try:
+      self.ldap_sync_admin_name = options.ldap_sync_admin_name
+    except AttributeError:
+      self.ldap_sync_admin_name = None
+
+    try:
+      self.ldap_sync_admin_password = options.ldap_sync_admin_password
+    except AttributeError:
+      self.ldap_sync_admin_password = None
+
   def no_ldap_sync_options_set(self):
     return not self.ldap_sync_all and not self.ldap_sync_existing and self.ldap_sync_users is None and self.ldap_sync_groups is None
 
@@ -272,10 +281,14 @@ def sync_ldap(options):
     err = 'Must specify a sync option (all, existing, users or groups).  Please invoke ambari-server.py --help to print the options.'
     raise FatalException(1, err)
 
-  admin_login = get_validated_string_input(prompt="Enter Ambari Admin login: ", default=None,
+  admin_login = ldap_sync_options.ldap_sync_admin_name\
+    if ldap_sync_options.ldap_sync_admin_name is not None and ldap_sync_options.ldap_sync_admin_name \
+    else get_validated_string_input(prompt="Enter Ambari Admin login: ", default=None,
                                            pattern=None, description=None,
                                            is_pass=False, allowEmpty=False)
-  admin_password = get_validated_string_input(prompt="Enter Ambari Admin password: ", default=None,
+  admin_password = ldap_sync_options.ldap_sync_admin_password \
+    if ldap_sync_options.ldap_sync_admin_password is not None and ldap_sync_options.ldap_sync_admin_password \
+    else get_validated_string_input(prompt="Enter Ambari Admin password: ", default=None,
                                               pattern=None, description=None,
                                               is_pass=True, allowEmpty=False)
 
@@ -406,20 +419,20 @@ def setup_master_key(options):
 
   if isSecure:
     print "Password encryption is enabled."
-    resetKey = get_YN_input("Do you want to reset Master Key? [y/n] (n): ", False)
+    resetKey = True if options.security_option is not None else get_YN_input("Do you want to reset Master Key? [y/n] (n): ", False)
 
   # For encrypting of only unencrypted passwords without resetting the key ask
   # for master key if not persisted.
   if isSecure and not isPersisted and not resetKey:
     print "Master Key not persisted."
-    masterKey = get_original_master_key(properties)
+    masterKey = get_original_master_key(properties, options)
   pass
 
   # Make sure both passwords are clear-text if master key is lost
   if resetKey:
     if not isPersisted:
       print "Master Key not persisted."
-      masterKey = get_original_master_key(properties)
+      masterKey = get_original_master_key(properties, options)
       # Unable get the right master key or skipped question <enter>
       if not masterKey:
         print "To disable encryption, do the following:"
@@ -448,8 +461,11 @@ def setup_master_key(options):
     ts_password = read_passwd_for_alias(SSL_TRUSTSTORE_PASSWORD_ALIAS, masterKey)
   # Read master key, if non-secure or reset is true
   if resetKey or not isSecure:
-    masterKey = read_master_key(resetKey)
-    persist = get_YN_input("Do you want to persist master key. If you choose " \
+    masterKey = read_master_key(resetKey, options)
+    if options.master_key_persist is not None and options.master_key_persist:
+      persist = True if options.master_key_persist == 'true' else False
+    else :
+      persist = get_YN_input("Do you want to persist master key. If you choose " \
                            "not to persist, you need to provide the Master " \
                            "Key while starting the ambari server as an env " \
                            "variable named " + SECURITY_KEY_ENV_VAR_NAME + \
@@ -516,18 +532,20 @@ def setup_master_key(options):
 
   return 0
 
-def setup_ambari_krb5_jaas():
+def setup_ambari_krb5_jaas(options):
   jaas_conf_file = search_file(SECURITY_KERBEROS_JASS_FILENAME, get_conf_dir())
   if os.path.exists(jaas_conf_file):
     print 'Setting up Ambari kerberos JAAS configuration to access ' + \
           'secured Hadoop daemons...'
-    principal = get_validated_string_input('Enter ambari server\'s kerberos '
-                                           'principal name (ambari@EXAMPLE.COM): ', 'ambari@EXAMPLE.COM', '.*', '', False,
-                                           False)
-    keytab = get_validated_string_input('Enter keytab path for ambari '
-                                        'server\'s kerberos principal: ',
-                                        '/etc/security/keytabs/ambari.keytab', '.*', False, False,
-                                        validatorFunction=is_valid_filepath)
+    principal = options.jaas_principal if options.jaas_principal is not None and options.jaas_principal else \
+      get_validated_string_input('Enter ambari server\'s kerberos '
+                                 'principal name (ambari@EXAMPLE.COM): ', 'ambari@EXAMPLE.COM', '.*', '', False,
+                                 False)
+    keytab = options.jaas_keytab if options.jaas_keytab is not None and options.jaas_keytab else \
+      get_validated_string_input('Enter keytab path for ambari '
+                                 'server\'s kerberos principal: ',
+                                 '/etc/security/keytabs/ambari.keytab', '.*', False, False,
+                                  validatorFunction=is_valid_filepath)
 
     for line in fileinput.FileInput(jaas_conf_file, inplace=1):
       line = re.sub('keyTab=.*$', 'keyTab="' + keytab + '"', line)
@@ -540,46 +558,47 @@ def setup_ambari_krb5_jaas():
 
 
 class LdapPropTemplate:
-  def __init__(self, properties, i_prop_name, i_prop_val_pattern, i_prompt_regex, i_allow_empty_prompt, i_prop_name_default=None):
+  def __init__(self, properties, i_option, i_prop_name, i_prop_val_pattern, i_prompt_regex, i_allow_empty_prompt, i_prop_name_default=None):
     self.prop_name = i_prop_name
+    self.option = i_option
     self.ldap_prop_name = get_value_from_properties(properties, i_prop_name, i_prop_name_default)
     self.ldap_prop_val_prompt = i_prop_val_pattern.format(get_prompt_default(self.ldap_prop_name))
     self.prompt_regex = i_prompt_regex
     self.allow_empty_prompt = i_allow_empty_prompt
 
 @OsFamilyFuncImpl(OSConst.WINSRV_FAMILY)
-def init_ldap_properties_list_reqd(properties):
+def init_ldap_properties_list_reqd(properties, options):
   # python2.x dict is not ordered
   ldap_properties = [
-    LdapPropTemplate(properties, "authentication.ldap.primaryUrl", "Primary URL* {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, False),
-    LdapPropTemplate(properties, "authentication.ldap.secondaryUrl", "Secondary URL {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, True),
-    LdapPropTemplate(properties, "authentication.ldap.useSSL", "Use SSL* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false"),
-    LdapPropTemplate(properties, "authentication.ldap.usernameAttribute", "User name attribute* {0}: ", REGEX_ANYTHING, False, "uid"),
-    LdapPropTemplate(properties, "authentication.ldap.baseDn", "Base DN* {0}: ", REGEX_ANYTHING, False),
-    LdapPropTemplate(properties, "authentication.ldap.referral", "Referral method [follow/ignore] {0}: ", REGEX_REFERRAL, True),
-    LdapPropTemplate(properties, "authentication.ldap.bindAnonymously" "Bind anonymously* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false")
+    LdapPropTemplate(properties, options.ldap_url, "authentication.ldap.primaryUrl", "Primary URL* {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, False),
+    LdapPropTemplate(properties, options.ldap_secondary_url, "authentication.ldap.secondaryUrl", "Secondary URL {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, True),
+    LdapPropTemplate(properties, options.ldap_ssl, "authentication.ldap.useSSL", "Use SSL* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false"),
+    LdapPropTemplate(properties, options.ldap_user_attr, "authentication.ldap.usernameAttribute", "User name attribute* {0}: ", REGEX_ANYTHING, False, "uid"),
+    LdapPropTemplate(properties, options.ldap_base_dn, "authentication.ldap.baseDn", "Base DN* {0}: ", REGEX_ANYTHING, False),
+    LdapPropTemplate(properties, options.ldap_referral, "authentication.ldap.referral", "Referral method [follow/ignore] {0}: ", REGEX_REFERRAL, True),
+    LdapPropTemplate(properties, options.ldap_bind_anonym, "authentication.ldap.bindAnonymously" "Bind anonymously* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false")
   ]
   return ldap_properties
 
 @OsFamilyFuncImpl(OsFamilyImpl.DEFAULT)
-def init_ldap_properties_list_reqd(properties):
+def init_ldap_properties_list_reqd(properties, options):
   ldap_properties = [
-    LdapPropTemplate(properties, LDAP_PRIMARY_URL_PROPERTY, "Primary URL* {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, False),
-    LdapPropTemplate(properties, "authentication.ldap.secondaryUrl", "Secondary URL {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, True),
-    LdapPropTemplate(properties, "authentication.ldap.useSSL", "Use SSL* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false"),
-    LdapPropTemplate(properties, "authentication.ldap.userObjectClass", "User object class* {0}: ", REGEX_ANYTHING, False, "posixAccount"),
-    LdapPropTemplate(properties, "authentication.ldap.usernameAttribute", "User name attribute* {0}: ", REGEX_ANYTHING, False, "uid"),
-    LdapPropTemplate(properties, "authentication.ldap.groupObjectClass", "Group object class* {0}: ", REGEX_ANYTHING, False, "posixGroup"),
-    LdapPropTemplate(properties, "authentication.ldap.groupNamingAttr", "Group name attribute* {0}: ", REGEX_ANYTHING, False, "cn"),
-    LdapPropTemplate(properties, "authentication.ldap.groupMembershipAttr", "Group member attribute* {0}: ", REGEX_ANYTHING, False, "memberUid"),
-    LdapPropTemplate(properties, "authentication.ldap.dnAttribute", "Distinguished name attribute* {0}: ", REGEX_ANYTHING, False, "dn"),
-    LdapPropTemplate(properties, "authentication.ldap.baseDn", "Base DN* {0}: ", REGEX_ANYTHING, False),
-    LdapPropTemplate(properties, "authentication.ldap.referral", "Referral method [follow/ignore] {0}: ", REGEX_REFERRAL, True),
-    LdapPropTemplate(properties, "authentication.ldap.bindAnonymously", "Bind anonymously* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false")
+    LdapPropTemplate(properties, options.ldap_url, LDAP_PRIMARY_URL_PROPERTY, "Primary URL* {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, False),
+    LdapPropTemplate(properties, options.ldap_secondary_url, "authentication.ldap.secondaryUrl", "Secondary URL {{host:port}} {0}: ", REGEX_HOSTNAME_PORT, True),
+    LdapPropTemplate(properties, options.ldap_ssl, "authentication.ldap.useSSL", "Use SSL* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false"),
+    LdapPropTemplate(properties, options.ldap_user_class, "authentication.ldap.userObjectClass", "User object class* {0}: ", REGEX_ANYTHING, False, "posixAccount"),
+    LdapPropTemplate(properties, options.ldap_user_attr, "authentication.ldap.usernameAttribute", "User name attribute* {0}: ", REGEX_ANYTHING, False, "uid"),
+    LdapPropTemplate(properties, options.ldap_group_class, "authentication.ldap.groupObjectClass", "Group object class* {0}: ", REGEX_ANYTHING, False, "posixGroup"),
+    LdapPropTemplate(properties, options.ldap_group_attr, "authentication.ldap.groupNamingAttr", "Group name attribute* {0}: ", REGEX_ANYTHING, False, "cn"),
+    LdapPropTemplate(properties, options.ldap_member_attr, "authentication.ldap.groupMembershipAttr", "Group member attribute* {0}: ", REGEX_ANYTHING, False, "memberUid"),
+    LdapPropTemplate(properties, options.ldap_dn, "authentication.ldap.dnAttribute", "Distinguished name attribute* {0}: ", REGEX_ANYTHING, False, "dn"),
+    LdapPropTemplate(properties, options.ldap_base_dn, "authentication.ldap.baseDn", "Base DN* {0}: ", REGEX_ANYTHING, False),
+    LdapPropTemplate(properties, options.ldap_referral, "authentication.ldap.referral", "Referral method [follow/ignore] {0}: ", REGEX_REFERRAL, True),
+    LdapPropTemplate(properties, options.ldap_bind_anonym, "authentication.ldap.bindAnonymously", "Bind anonymously* [true/false] {0}: ", REGEX_TRUE_FALSE, False, "false")
   ]
   return ldap_properties
 
-def setup_ldap():
+def setup_ldap(options):
   if not is_root():
     err = 'Ambari-server setup-ldap should be run with ' \
           'root-level privileges'
@@ -588,7 +607,7 @@ def setup_ldap():
   properties = get_ambari_properties()
   isSecure = get_is_secure(properties)
 
-  ldap_property_list_reqd = init_ldap_properties_list_reqd(properties)
+  ldap_property_list_reqd = init_ldap_properties_list_reqd(properties, options)
 
   ldap_property_list_opt = ["authentication.ldap.managerDn",
                             LDAP_MGR_PASSWORD_PROPERTY,
@@ -611,7 +630,11 @@ def setup_ldap():
 
   ldap_property_value_map = {}
   for ldap_prop in ldap_property_list_reqd:
-    input = get_validated_string_input(ldap_prop.ldap_prop_val_prompt, ldap_prop.ldap_prop_name, ldap_prop.prompt_regex,
+    input = None
+    if ldap_prop.option is not None:
+      input = ldap_prop.option
+    else:
+      input = get_validated_string_input(ldap_prop.ldap_prop_val_prompt, ldap_prop.ldap_prop_name, ldap_prop.prompt_regex,
                                        "Invalid characters in the input!", False, ldap_prop.allow_empty_prompt)
     if input is not None and input != "":
       ldap_property_value_map[ldap_prop.prop_name] = input
@@ -621,11 +644,15 @@ def setup_ldap():
   mgr_password = None
   # Ask for manager credentials only if bindAnonymously is false
   if not anonymous:
-    username = get_validated_string_input("Manager DN* {0}: ".format(
+    username = None
+    if options.ldap_manager_dn is not None:
+      username = options.ldap_manager_dn
+    else:
+      username = get_validated_string_input("Manager DN* {0}: ".format(
       get_prompt_default(LDAP_MGR_DN_DEFAULT)), LDAP_MGR_DN_DEFAULT, ".*",
                                           "Invalid characters in the input!", False, False)
     ldap_property_value_map[LDAP_MGR_USERNAME_PROPERTY] = username
-    mgr_password = configure_ldap_password()
+    mgr_password = configure_ldap_password(options)
     ldap_property_value_map[LDAP_MGR_PASSWORD_PROPERTY] = mgr_password
 
   useSSL = ldap_property_value_map["authentication.ldap.useSSL"]
@@ -637,17 +664,21 @@ def setup_ldap():
     truststore_set = bool(SSL_TRUSTSTORE_PATH_DEFAULT)
     if truststore_set:
       truststore_default = "y"
-    custom_trust_store = get_YN_input("Do you want to provide custom TrustStore for Ambari [y/n] ({0})?".
+    custom_trust_store = None
+    if options.custom_trust_store is not None:
+      custom_trust_store = options.custom_trust_store
+    else:
+      custom_trust_store = get_YN_input("Do you want to provide custom TrustStore for Ambari [y/n] ({0})?".
                                       format(truststore_default),
                                       truststore_set)
     if custom_trust_store:
-      ts_type = get_validated_string_input(
+      ts_type = options.trust_store_type if options.trust_store_type is not None else get_validated_string_input(
         "TrustStore type [jks/jceks/pkcs12] {0}:".format(get_prompt_default(SSL_TRUSTSTORE_TYPE_DEFAULT)),
         SSL_TRUSTSTORE_TYPE_DEFAULT,
         "^(jks|jceks|pkcs12)?$", "Wrong type", False)
       ts_path = None
       while True:
-        ts_path = get_validated_string_input(
+        ts_path = options.trust_store_path if options.trust_store_path is not None else get_validated_string_input(
           "Path to TrustStore file {0}:".format(get_prompt_default(SSL_TRUSTSTORE_PATH_DEFAULT)),
           SSL_TRUSTSTORE_PATH_DEFAULT,
           ".*", False, False)
@@ -656,7 +687,8 @@ def setup_ldap():
         else:
           print 'File not found.'
 
-      ts_password = read_password("", ".*", "Password for TrustStore:", "Invalid characters in password")
+      ts_password = options.trust_store_password if options.trust_store_password is not None else \
+        read_password("", ".*", "Password for TrustStore:", "Invalid characters in password")
 
       ldap_property_value_map[SSL_TRUSTSTORE_TYPE_PROPERTY] = ts_type
       ldap_property_value_map[SSL_TRUSTSTORE_PATH_PROPERTY] = ts_path
@@ -683,18 +715,18 @@ def setup_ldap():
       else:
         print("%s: %s" % (property, BLIND_PASSWORD))
 
-  save_settings = get_YN_input("Save settings [y/n] (y)? ", True)
+  save_settings = True if options.ldap_save_settings is not None else get_YN_input("Save settings [y/n] (y)? ", True)
 
   if save_settings:
     ldap_property_value_map[CLIENT_SECURITY_KEY] = 'ldap'
     if isSecure:
       if mgr_password:
-        encrypted_passwd = encrypt_password(LDAP_MGR_PASSWORD_ALIAS, mgr_password)
+        encrypted_passwd = encrypt_password(LDAP_MGR_PASSWORD_ALIAS, mgr_password, options)
         if mgr_password != encrypted_passwd:
           ldap_property_value_map[LDAP_MGR_PASSWORD_PROPERTY] = encrypted_passwd
       pass
       if ts_password:
-        encrypted_passwd = encrypt_password(SSL_TRUSTSTORE_PASSWORD_ALIAS, ts_password)
+        encrypted_passwd = encrypt_password(SSL_TRUSTSTORE_PASSWORD_ALIAS, ts_password, options)
         if ts_password != encrypted_passwd:
           ldap_property_value_map[SSL_TRUSTSTORE_PASSWORD_PROPERTY] = encrypted_passwd
       pass

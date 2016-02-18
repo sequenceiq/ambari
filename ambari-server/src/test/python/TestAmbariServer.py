@@ -274,6 +274,7 @@ class TestAmbariServer(TestCase):
     args = ["setup-security"]
     opm.parse_args.return_value = (options, args)
     options.dbms = None
+    options.security_option = "setup-security"
     options.sid_or_sname = "sid"
     setup_security_method.return_value = None
 
@@ -295,7 +296,7 @@ class TestAmbariServer(TestCase):
                           setup_truststore_mock, setup_master_key_mock,
                           setup_ambari_krb5_jaas_mock):
 
-    args = {}
+    args = self._create_empty_options_mock()
     get_validated_string_input_mock.return_value = '1'
     _ambari_server_.setup_security(args)
     self.assertTrue(setup_https_mock.called)
@@ -332,7 +333,7 @@ class TestAmbariServer(TestCase):
 
     # Negative case
     try:
-      setup_ambari_krb5_jaas()
+      setup_ambari_krb5_jaas(self._create_empty_options_mock())
       self.fail("Should throw exception")
     except NonFatalException as fe:
       # Expected
@@ -347,7 +348,7 @@ class TestAmbariServer(TestCase):
 
     fileinput_mock.return_value = [ 'keyTab=xyz', 'principal=xyz' ]
 
-    setup_ambari_krb5_jaas()
+    setup_ambari_krb5_jaas(self._create_empty_options_mock())
 
     self.assertTrue(fileinput_mock.called)
     self.assertTrue(re_sub_mock.called)
@@ -365,7 +366,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_setup(self, OptionParserMock, reset_method, stop_method,
                            start_method, setup_method, exit_mock):
     opm = OptionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["setup"]
     opm.parse_args.return_value = (options, args)
 
@@ -387,7 +388,7 @@ class TestAmbariServer(TestCase):
     reset_method.reset_mock()
     exit_mock.reset_mock()
     args = ["setup", "-v"]
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     opm.parse_args.return_value = (options, args)
     options.dbms = None
     options.sid_or_sname = "sid"
@@ -408,7 +409,7 @@ class TestAmbariServer(TestCase):
     reset_method.reset_mock()
     exit_mock.reset_mock()
     args = ["setup"]
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     opm.parse_args.return_value = (options, args)
     options.dbms = None
     options.sid_or_sname = "sid"
@@ -429,7 +430,7 @@ class TestAmbariServer(TestCase):
   @patch("optparse.OptionParser")
   def test_main_with_preset_dbms(self, optionParserMock, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["setup"]
     opm.parse_args.return_value = (options, args)
 
@@ -447,7 +448,7 @@ class TestAmbariServer(TestCase):
   @patch("optparse.OptionParser")
   def test_fix_database_options_called(self, optionParserMock, fixDBOptionsMock, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["setup"]
     opm.parse_args.return_value = (options, args)
 
@@ -467,7 +468,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_start(self, optionParserMock, reset_method, stop_method,
                            start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["setup"]
     opm.parse_args.return_value = (options, args)
 
@@ -493,7 +494,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_start_debug_short(self, optionParserMock, reset_method, stop_method,
                                        start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["start", "-g"]
     opm.parse_args.return_value = (options, args)
 
@@ -519,7 +520,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_start_debug_long(self, optionParserMock, reset_method, stop_method,
                                       start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["start", "--debug"]
     opm.parse_args.return_value = (options, args)
     options.dbms = None
@@ -546,7 +547,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_backup(self, optionParserMock, restore_mock, backup_mock, reset_method, stop_method,
                            start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["backup"]
     opm.parse_args.return_value = (options, args)
 
@@ -576,7 +577,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_restore(self, optionParserMock, restore_mock, backup_mock, reset_method, stop_method,
                             start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["restore"]
     opm.parse_args.return_value = (options, args)
 
@@ -604,7 +605,7 @@ class TestAmbariServer(TestCase):
   def test_main_test_stop(self, optionParserMock, reset_method, is_server_runing_method,
                           start_method, setup_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     del options.exit_message
 
     args = ["stop"]
@@ -638,7 +639,7 @@ class TestAmbariServer(TestCase):
                            start_method, setup_method):
     opm = optionParserMock.return_value
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     args = ["reset"]
     opm.parse_args.return_value = (options, args)
     options.dbms = None
@@ -1149,7 +1150,7 @@ class TestAmbariServer(TestCase):
   @patch("ambari_server.serverSetup.run_os_command")
   def test_create_custom_user(self, run_os_command_mock, print_warning_msg_mock,
                               print_info_msg_mock, get_validated_string_input_mock):
-    options = MagicMock()
+    options = self._create_empty_options_mock()
 
     user = "dummy-user"
     get_validated_string_input_mock.return_value = user
@@ -1198,7 +1199,7 @@ class TestAmbariServer(TestCase):
                              run_os_command_mock, adjust_directory_permissions_mock,
                              get_validated_string_input_mock, get_YN_input_mock, read_ambari_user_mock):
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
 
     run_os_command_mock.return_value = (0, "", "")
 
@@ -1417,9 +1418,10 @@ class TestAmbariServer(TestCase):
     command = "command"
     property = "use_ssl"
     alias = "alias"
+    options = self._create_empty_options_mock()
     #Silent mode
     set_silent(True)
-    setup_truststore()
+    setup_truststore(options)
     self.assertEqual('setup-security is not enabled in silent mode.\n', out.getvalue())
     sys.stdout = sys.__stdout__
     #Verbouse mode and jdk_path is None
@@ -1428,14 +1430,14 @@ class TestAmbariServer(TestCase):
     # Dont disable ssl
     get_YN_input_mock.side_effect = [False]
     get_validated_string_input_mock.return_value = "alias"
-    setup_truststore()
+    setup_truststore(options)
     self.assertTrue(get_YN_input_mock.called)
     p.get_property.reset_mock()
     get_YN_input_mock.reset_mock()
     # Cant find jdk
     find_jdk_mock.return_value = None
     try:
-        setup_truststore()
+        setup_truststore(options)
         self.fail("Should throw exception")
     except FatalException as fe:
         # Expected
@@ -1449,7 +1451,7 @@ class TestAmbariServer(TestCase):
     get_truststore_path_mock.return_value = "/truststore_path"
     get_truststore_password_mock.return_value = "/truststore_password"
     get_delete_cert_command_mock.return_value = "rm -f"
-    setup_truststore(True)
+    setup_truststore(options, True)
 
     self.assertTrue(get_truststore_path_mock.called)
     self.assertTrue(get_truststore_password_mock.called)
@@ -1469,7 +1471,7 @@ class TestAmbariServer(TestCase):
     #Verbouse mode and jdk_path is not None (use_https = false) and import cert
     p.get_property.side_effect = ["false"]
     get_YN_input_mock.side_effect = [True,True]
-    setup_truststore(True)
+    setup_truststore(options, True)
 
     self.assertTrue(get_truststore_type_mock.called)
     self.assertTrue(get_truststore_path_mock.called)
@@ -1515,10 +1517,16 @@ class TestAmbariServer(TestCase):
 
     is_valid_cert_exp_mock.return_value = True
     is_valid_cert_host_mock.return_value = True
-    args = MagicMock()
     open_Mock.return_value = file
     p = get_ambari_properties_mock.return_value
 
+    args = MagicMock()
+    args.security_keys_dir = None
+    args.client_api_ssl_port = None
+    args.api_ssl = None
+    args.import_cert_path = None
+    args.import_key_path = None
+    args.pem_password = None
     # Testing call under non-root
     is_root_mock.return_value = False
     try:
@@ -1675,7 +1683,8 @@ class TestAmbariServer(TestCase):
     expect_process_pair = "[call('client.api.ssl.cert_name', 'https.crt'),\n" + \
                           " call('client.api.ssl.key_name', 'https.key'),\n" + \
                           " call('api.ssl', 'true')]"
-    import_cert_and_key_action("key_dir", properties)
+    options = self._create_empty_options_mock()
+    import_cert_and_key_action("key_dir", properties, options)
 
     self.assertEqual(str(properties.process_pair.call_args_list), \
                      expect_process_pair)
@@ -1694,7 +1703,7 @@ class TestAmbariServer(TestCase):
   @patch("ambari_server.setupHttps.get_validated_string_input")
   @patch("ambari_server.setupHttps.is_valid_cert_host")
   @patch("ambari_server.setupHttps.is_valid_cert_exp")
-  def test_import_cert_and_key(self, is_valid_cert_exp_mock, \
+  def test_ambariServerSetupWithCustomDbName(self, is_valid_cert_exp_mock, \
                                is_valid_cert_host_mock, \
                                get_validated_string_input_mock, \
                                raw_input_mock, \
@@ -1724,8 +1733,8 @@ class TestAmbariServer(TestCase):
                                      " 'keystore_cert_file_path'),\n" + \
                                      " call('key_file_path'," + \
                                      " 'keystore_cert_key_file_path')]"
-
-    import_cert_and_key("key_dir")
+    options = self._create_empty_options_mock()
+    import_cert_and_key("key_dir", options)
     self.assertTrue(raw_input_mock.call_count == 2)
     self.assertTrue(get_validated_string_input_mock.called)
     self.assertEqual(os_path_join_mock.call_count, 8)
@@ -1775,8 +1784,8 @@ class TestAmbariServer(TestCase):
                                      " 'keystore_cert_file_path'),\n" + \
                                      " call('key_file_path.secured'," + \
                                      " 'keystore_cert_key_file_path')]"
-
-    import_cert_and_key("key_dir")
+    options = self._create_empty_options_mock()
+    import_cert_and_key("key_dir", options)
     self.assertEquals(get_validated_filepath_input_mock.call_count, 2)
     self.assertTrue(get_validated_string_input_mock.called)
     self.assertEquals(os_path_join_mock.call_count, 8)
@@ -1813,13 +1822,13 @@ class TestAmbariServer(TestCase):
 
     os_path_join_mock.return_value = ''
     is_root_mock.return_value = True
-
+    options = self._create_empty_options_mock()
 
     #provided password doesn't match, openssl command returns an error
     run_os_command_mock.return_value = (1, "", "Some error message")
 
-    self.assertFalse(import_cert_and_key_action(*["key_dir", None]))
-    self.assertFalse(import_cert_and_key("key_dir"))
+    self.assertFalse(import_cert_and_key_action(*["key_dir", None, options]))
+    self.assertFalse(import_cert_and_key("key_dir", options))
     pass
 
   def test_is_valid_cert_exp(self):
@@ -2469,7 +2478,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     self.assertEqual(dbmsConfig.database_password, "bigdata")
     self.assertEqual(dbmsConfig.sid_or_sname, "sid")
 
-    dbmsConfig.configure_database(props)
+    dbmsConfig.configure_database(props, args)
 
     self.assertEqual(dbmsConfig.database_username, "ambari-server")
     self.assertEqual(dbmsConfig.sid_or_sname, "sname")
@@ -2526,7 +2535,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     self.assertEqual(dbmsConfig.database_username, "ambari")
     self.assertEqual(dbmsConfig.database_password, "bigdata")
 
-    dbmsConfig.configure_database(props)
+    dbmsConfig.configure_database(props, args)
 
     self.assertEqual(dbmsConfig.database_username, "ambari-server")
     self.assertEqual(dbmsConfig.database_password, "password")
@@ -2594,7 +2603,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     isdir_mock.return_value = False
 
-    dbmsConfig.configure_database(props)
+    dbmsConfig.configure_database(props, args)
 
     self.assertEqual(dbmsConfig.database_username, "ambari-server")
     self.assertEqual(dbmsConfig.database_password, "password")
@@ -2681,9 +2690,9 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
       dbConfig._prompt_db_properties()
 
       if dbConfig._is_local_database():
-        dbConfig._setup_local_server(properties)
+        dbConfig._setup_local_server(properties, None)
       else:
-        dbConfig._setup_remote_server(properties)
+        dbConfig._setup_remote_server(properties, None)
 
       if i == 0:
         # Postgres Embedded
@@ -4862,7 +4871,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     factory = DBMSConfigFactory()
     dbConfig = factory.create(args, properties0)
 
-    dbConfig._store_remote_properties(properties)
+    dbConfig._store_remote_properties(properties, None)
 
     found = False
     for n in properties.propertyNames():
@@ -5332,7 +5341,8 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     get_is_secure_method.return_value = False
     exists_mock.return_value = False
 
-    setup_master_key(MagicMock())
+    options = self._create_empty_options_mock()
+    setup_master_key(options)
 
     self.assertTrue(get_YN_input_method.called)
     self.assertTrue(read_master_key_method.called)
@@ -5396,7 +5406,8 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     exists_mock.return_value = False
     save_passwd_for_alias_method.return_value = 0
 
-    setup_master_key(MagicMock())
+    options = self._create_empty_options_mock()
+    setup_master_key(options)
 
     self.assertTrue(get_YN_input_method.called)
     self.assertTrue(read_master_key_method.called)
@@ -5468,7 +5479,9 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     save_passwd_for_alias_method.return_value = 0
     exists_mock.return_value = False
 
-    setup_master_key(MagicMock())
+
+    options = self._create_empty_options_mock()
+    setup_master_key(options)
 
     self.assertTrue(save_master_key_method.called)
     self.assertTrue(get_YN_input_method.called)
@@ -5540,7 +5553,8 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     get_is_secure_method.return_value = True
     get_is_persisted_method.return_value = (True, "filePath")
 
-    setup_master_key(MagicMock())
+    options = self._create_empty_options_mock()
+    setup_master_key(options)
 
     self.assertFalse(save_master_key_method.called)
     self.assertTrue(get_YN_input_method.called)
@@ -5596,7 +5610,8 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     set_silent(False)
     get_YN_input_method.return_value = True
 
-    setup_ldap()
+    options = self._create_empty_options_mock()
+    setup_ldap(options)
 
     ldap_properties_map = \
       {
@@ -5626,7 +5641,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     raw_input_mock.reset_mock()
     raw_input_mock.side_effect = ['a:3', '', 'b:2', 'false', 'user', 'uid', 'group', 'cn', 'member', 'dn', 'base', 'follow', 'true']
 
-    setup_ldap()
+    setup_ldap(options)
 
     ldap_properties_map = \
       {
@@ -5676,11 +5691,11 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     out = StringIO.StringIO()
     sys.stdout = out
 
-
+    options = self._create_empty_options_mock()
     # Testing call under non-root
     is_root_method.return_value = False
     try:
-      setup_ldap()
+      setup_ldap(options)
       self.fail("Should throw exception")
     except FatalException as fe:
       # Expected
@@ -5720,12 +5735,13 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
         return "test"
 
     get_validated_string_input_method.side_effect = valid_input_side_effect
-
-    setup_ldap()
+    options.ldap_url = "myurl"
+    options.ldap_member_attr = "member"
+    setup_ldap(options)
 
     ldap_properties_map = \
       {
-        "authentication.ldap.primaryUrl": "test",
+        "authentication.ldap.primaryUrl": "myurl",
         "authentication.ldap.secondaryUrl": "test",
         "authentication.ldap.useSSL": "false",
         "authentication.ldap.userObjectClass": "test",
@@ -5734,7 +5750,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
         "authentication.ldap.bindAnonymously": "false",
         "authentication.ldap.managerDn": "test",
         "authentication.ldap.groupObjectClass": "test",
-        "authentication.ldap.groupMembershipAttr": "test",
+        "authentication.ldap.groupMembershipAttr": "member",
         "authentication.ldap.groupNamingAttr": "test",
         "authentication.ldap.dnAttribute": "test",
         "authentication.ldap.referral": "test",
@@ -5787,7 +5803,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     get_YN_input_method.side_effect = [True, True]
     update_properties_method.reset_mock()
 
-    setup_ldap()
+    setup_ldap(options)
 
     self.assertTrue(read_password_method.called)
 
@@ -5839,11 +5855,9 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     options.ldap_sync_existing = False
-    options.ldap_sync_users = None
-    options.ldap_sync_groups = None
 
     sync_ldap(options)
 
@@ -5887,7 +5901,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = False
     options.ldap_sync_existing = False
     options.ldap_sync_users = 'users.txt'
@@ -5933,7 +5947,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = False
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -5975,7 +5989,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -6015,7 +6029,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = False
     options.ldap_sync_existing = True
     options.ldap_sync_users = None
@@ -6050,7 +6064,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     del options.ldap_sync_all
     del options.ldap_sync_existing
     del options.ldap_sync_users
@@ -6085,7 +6099,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     urlopen_mock.return_value = response
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = False
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -6109,7 +6123,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
                                 is_server_runing_method, is_root_method,
                                 encodestring_method, request_constructor, urlopen_method):
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -6169,7 +6183,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
   def test_sync_ldap_ambari_stopped(self, is_root_method):
     is_root_method.return_value = False
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -6190,7 +6204,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     is_root_method.return_value = True
     is_server_runing_method.return_value = (None, None)
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     options.ldap_sync_existing = False
     options.ldap_sync_users = None
@@ -6217,7 +6231,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     configs.get_property.return_value = None
     get_ambari_properties_method.return_value = configs
 
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     options.ldap_sync_all = True
     del options.ldap_sync_existing
     del options.ldap_sync_users
@@ -6258,8 +6272,8 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
     out = StringIO.StringIO()
     sys.stdout = out
     read_password_method.return_value = "blah"
-
-    configure_ldap_password()
+    options = self._create_empty_options_mock()
+    configure_ldap_password(options)
 
     self.assertTrue(read_password_method.called)
 
@@ -6574,18 +6588,36 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
   def test_setup_ambari_krb5_jaas(self, get_validated_string_input_mock,
                                   search_file_mock):
     search_file_mock.return_value = ''
-
+    options = self._create_empty_options_mock()
     # Should raise exception if jaas_conf_file isn't an existing file
-    self.assertRaises(NonFatalException, setup_ambari_krb5_jaas)
+    with self.assertRaises(NonFatalException):
+      setup_ambari_krb5_jaas(options)
+
+
+    temp_file = tempfile.NamedTemporaryFile(mode='r')
+    search_file_mock.return_value = temp_file.name
+    get_validated_string_input_mock.side_effect = ['adm@EXAMPLE.COM', temp_file]
+    # setup_ambari_krb5_jaas() should return None if everything is OK
+    self.assertEqual(None, setup_ambari_krb5_jaas(options))
+    self.assertTrue(get_validated_string_input_mock.called)
+    self.assertEqual(get_validated_string_input_mock.call_count, 2)
+    pass
+
+  @patch("ambari_server.setupSecurity.search_file")
+  @patch("ambari_server.setupSecurity.get_validated_string_input")
+  def test_setup_ambari_krb5_jaas_with_options(self, get_validated_string_input_mock,
+                                  search_file_mock):
+    options = self._create_empty_options_mock()
+    options.jaas_principal = 'adm@EXAMPLE.COM'
+    options.jaas_keytab = '/kerberos/admin.keytab'
 
     temp_file = tempfile.NamedTemporaryFile(mode='r')
     search_file_mock.return_value = temp_file.name
     get_validated_string_input_mock.side_effect = ['adm@EXAMPLE.COM', temp_file]
 
-    # setup_ambari_krb5_jaas() should return None if everything is OK
-    self.assertEqual(None, setup_ambari_krb5_jaas())
-    self.assertTrue(get_validated_string_input_mock.called)
-    self.assertEqual(get_validated_string_input_mock.call_count, 2)
+    self.assertEqual(None, setup_ambari_krb5_jaas(options))
+    self.assertFalse(get_validated_string_input_mock.called)
+    self.assertEqual(get_validated_string_input_mock.call_count, 0)
     pass
 
   @patch("os.listdir")
@@ -6822,7 +6854,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
   @patch("optparse.OptionParser")
   def test_main_test_status_running(self, optionParserMock, is_server_runing_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     del options.exit_message
 
     args = ["status"]
@@ -6848,7 +6880,7 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
   @patch("optparse.OptionParser")
   def test_main_test_status_not_running(self, optionParserMock, is_server_runing_method):
     opm = optionParserMock.return_value
-    options = MagicMock()
+    options = self._create_empty_options_mock()
     del options.exit_message
 
     args = ["status"]
@@ -6866,6 +6898,44 @@ MIIFHjCCAwYCCQDpHKOBI+Lt0zANBgkqhkiG9w0BAQUFADBRMQswCQYDVQQGEwJV
 
     self.assertTrue(is_server_runing_method.called)
     pass
+
+  def _create_empty_options_mock(self):
+    options = MagicMock()
+    options.ldap_url = None
+    options.ldap_secondary_url = None
+    options.ldap_ssl = None
+    options.ldap_user_class = None
+    options.ldap_user_attr = None
+    options.ldap_group_class = None
+    options.ldap_group_attr = None
+    options.ldap_member_attr = None
+    options.ldap_dn = None
+    options.ldap_base_dn = None
+    options.ldap_manager_dn = None
+    options.ldap_manager_password = None
+    options.ldap_save_settings = None
+    options.ldap_referral = None
+    options.ldap_bind_anonym = None
+    options.ldap_sync_admin_name = None
+    options.ldap_sync_admin_password = None
+    options.custom_trust_store = None
+    options.trust_store_type = None
+    options.trust_store_path = None
+    options.trust_store_password = None
+    options.security_option = None
+    options.security_keys_dir = None
+    options.api_ssl = None
+    options.api_ssl_port = None
+    options.client_api_ssl_port = None
+    options.import_cert_path = None
+    options.import_cert_alias = None
+    options.pem_password = None
+    options.import_key_path = None
+    options.master_key = None
+    options.master_key_persist = None
+    options.jaas_principal = None
+    options.jaas_keytab = None
+    return options
 
 
 

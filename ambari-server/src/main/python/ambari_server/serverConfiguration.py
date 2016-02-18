@@ -681,20 +681,20 @@ def update_database_name_property(upgrade=False):
       raise FatalException(-1, err)
 
 
-def encrypt_password(alias, password):
+def encrypt_password(alias, password, options):
   properties = get_ambari_properties()
   if properties == -1:
     raise FatalException(1, None)
-  return get_encrypted_password(alias, password, properties)
+  return get_encrypted_password(alias, password, properties, options)
 
-def get_encrypted_password(alias, password, properties):
+def get_encrypted_password(alias, password, properties, options):
   isSecure = get_is_secure(properties)
   (isPersisted, masterKeyFile) = get_is_persisted(properties)
   if isSecure:
     masterKey = None
     if not masterKeyFile:
       # Encryption enabled but no master key file found
-      masterKey = get_original_master_key(properties)
+      masterKey = get_original_master_key(properties, options)
 
     retCode = save_passwd_for_alias(alias, password, masterKey)
     if retCode != 0:
@@ -721,7 +721,7 @@ def get_alias_string(alias):
 def get_alias_from_alias_string(aliasStr):
   return aliasStr[8:-1]
 
-def read_passwd_for_alias(alias, masterKey=""):
+def read_passwd_for_alias(alias, masterKey="", options=None):
   if alias:
     jdk_path = find_jdk()
     if jdk_path is None:
@@ -739,6 +739,8 @@ def read_passwd_for_alias(alias, masterKey=""):
     os.chmod(tempFilePath, stat.S_IREAD | stat.S_IWRITE)
     file.close()
 
+    if options is not None and options.master_key is not None and options.master_key:
+      masterKey = options.master_key
     if masterKey is None or masterKey == "":
       masterKey = "None"
 
@@ -758,16 +760,15 @@ def read_passwd_for_alias(alias, masterKey=""):
   else:
     print_error_msg("Alias is unreadable.")
 
-def decrypt_password_for_alias(properties, alias):
+def decrypt_password_for_alias(properties, alias, options=None):
   isSecure = get_is_secure(properties)
   if isSecure:
     masterKey = None
     (isPersisted, masterKeyFile) = get_is_persisted(properties)
     if not masterKeyFile:
       # Encryption enabled but no master key file found
-      masterKey = get_original_master_key(properties)
-
-    return read_passwd_for_alias(alias, masterKey)
+      masterKey = get_original_master_key(properties, options)
+    return read_passwd_for_alias(alias, masterKey, options)
   else:
     return alias
 
@@ -825,12 +826,16 @@ def remove_password_file(filename):
   return 0
 
 
-def get_original_master_key(properties):
+def get_original_master_key(properties, options = None):
   input = True
+  masterKey = None
   while(input):
     try:
-      masterKey = get_validated_string_input('Enter current Master Key: ',
-                                             "", ".*", "", True, False)
+      if options is not None and options.master_key is not None and options.master_key:
+        masterKey = options.master_key
+      if masterKey is None:
+        masterKey = get_validated_string_input('Enter current Master Key: ',
+                                               "", ".*", "", True, False)
     except KeyboardInterrupt:
       print 'Exiting...'
       sys.exit(1)
@@ -853,7 +858,7 @@ def get_original_master_key(properties):
 
     # Decrypt alias with master to validate it, if no master return
     if alias and masterKey:
-      password = read_passwd_for_alias(alias, masterKey)
+      password = read_passwd_for_alias(alias, masterKey, options)
       if not password:
         print "ERROR: Master key does not match."
         continue
