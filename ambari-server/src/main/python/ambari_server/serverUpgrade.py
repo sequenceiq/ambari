@@ -59,6 +59,10 @@ STACK_UPGRADE_HELPER_CMD = "{0} -cp {1} " + \
                            "org.apache.ambari.server.upgrade.StackUpgradeHelper" + \
                            " {2} {3} > " + configDefaults.SERVER_OUT_FILE + " 2>&1"
 
+DB_CLEANUP_CMD = "{0} -cp {1} " + \
+                 "org.apache.ambari.server.cleanup.CleanupDriver" + \
+                 " > " + configDefaults.SERVER_OUT_FILE + " 2>&1"
+
 
 #
 # Stack upgrade
@@ -278,6 +282,56 @@ def run_schema_upgrade(args):
 
 
 #
+#
+# Run the db cleanup process
+#
+def run_db_cleanup(args):
+    db_title = get_db_type(get_ambari_properties()).title
+    confirm = get_YN_input("Ambari Server configured for %s. Cleanup the Ambari Server database [y/n] (y)? " % db_title,
+                           True)
+
+    if not confirm:
+        print_error_msg("Database cleanup is not confirmed")
+        return 1
+
+    jdk_path = get_java_exe_path()
+    if jdk_path is None:
+        print_error_msg("No JDK found, please run the \"setup\" "
+                        "command to install a JDK automatically or install any "
+                        "JDK manually to " + configDefaults.JDK_INSTALL_DIR)
+        return 1
+
+    ensure_jdbc_driver_is_installed(args, get_ambari_properties())
+
+    print 'Cleaning up database schema'
+
+    serverClassPath = ServerClassPath(get_ambari_properties(), args)
+    class_path = serverClassPath.get_full_ambari_classpath_escaped_for_shell()
+
+    command = DB_CLEANUP_CMD.format(jdk_path, class_path)
+
+    ambari_user = read_ambari_user()
+    current_user = ensure_can_start_under_current_user(ambari_user)
+    environ = generate_env(args, ambari_user, current_user)
+
+    (retcode, stdout, stderr) = run_os_command(command, env=environ)
+    print_info_msg("Return code from database cleanup command, retcode = " + str(retcode))
+    if stdout:
+        print "Console output from database cleanup command:"
+        print stdout
+        print
+    if stderr:
+        print "Error output from databse cleanup command:"
+        print stderr
+        print
+    if retcode > 0:
+        print_error_msg("Error executing database cleanup, please check the server logs.")
+    else:
+        print_info_msg('Databse cleanup completed')
+    return retcode
+
+
+#
 # Upgrades the Ambari Server.
 #
 def move_user_custom_actions():
@@ -392,6 +446,12 @@ def upgrade(args):
   # check if ambari has obsolete LDAP configuration
   if properties.get_property(LDAP_PRIMARY_URL_PROPERTY) and not properties.get_property(IS_LDAP_CONFIGURED):
     args.warnings.append("Existing LDAP configuration is detected. You must run the \"ambari-server setup-ldap\" command to adjust existing LDAP configuration.")
+
+#
+# Database cleanup
+#
+def db_cleanup(args):
+  retcode = run_db_cleanup(args)
 
 
 #
