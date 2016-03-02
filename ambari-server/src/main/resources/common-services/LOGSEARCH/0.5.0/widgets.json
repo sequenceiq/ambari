@@ -1,0 +1,173 @@
+{
+    "layouts": [
+	{
+	    "layout_name": "default_logsearch_dashboard",
+	    "display_name": "Logsearch Dashboard",
+	    "section_name": "LOGSEARCH_SUMMARY",
+	    "widgetLayoutInfo": [
+		{
+		    "widget_name": "Files Monitoring",
+		    "description": "Files that are been monitored",
+		    "widget_type": "NUMBER",
+		    "is_visible": true,
+		    "metrics": [
+			{
+			    "name": "input.files.count",
+			    "metric_path": "metrics/input/files/count",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			}
+		    ],
+		    "values": [
+			{
+			    "name": "Files count",
+			    "value": "${input.files.count}"
+			}
+		    ],
+		    "properties": {
+		    }
+		},
+		{
+		    "widget_name": "Logs Published",
+		    "description": "Logs Published",
+		    "widget_type": "GRAPH",
+		    "is_visible": true,
+		    "metrics": [
+			{
+			    "name": "output.solr.write_logs._sum",
+			    "metric_path": "metrics/output/solr/write_logs",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			},
+			{
+			    "name": "output.kafka.write_logs._sum",
+			    "metric_path": "metrics/output/kafka/write_logs",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			}
+		    ],
+		    "values": [
+			{
+			    "name": "Logs to Solr",
+			    "value": "${output.solr.write_logs._sum/1000}"
+			},
+			{
+			    "name": "Logs to Kafka",
+			    "value": "${output.kafka.write_logs._sum/1000}"
+			}
+		    ],
+		    "properties": {
+			"display_unit": "K",
+			"graph_type": "LINE",
+			"time_range": "1"
+		    }
+		},
+		{
+		    "widget_name": "Lines Read",
+		    "description": "Lines Read",
+		    "widget_type": "GRAPH",
+		    "is_visible": true,
+		    "metrics": [
+			{
+			    "name": "input.files.read_lines._sum",
+			    "metric_path": "metrics/input/files/read_lines",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			}
+
+		    ],
+		    "values": [
+			{
+			    "name": "Lines read from File",
+			    "value": "${input.files.read_lines._sum/1024}"
+			}
+		    ],
+		    "properties": {
+			"display_unit": "K",
+			"graph_type": "LINE",
+			"time_range": "1"
+		    }
+		},
+		{
+		    "widget_name": "Read/Write Bytes",
+		    "description": "Bytes read and written",
+		    "widget_type": "GRAPH",
+		    "is_visible": true,
+		    "metrics": [
+			{
+			    "name": "input.files.read_bytes._sum",
+			    "metric_path": "metrics/input/files/read_bytes",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			},
+			{
+			    "name": "output.solr.write_bytes._sum",
+			    "metric_path": "metrics/output/solr/write_bytes",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			},
+			{
+			    "name": "output.kafka.write_bytes._sum",
+			    "metric_path": "metrics/output/kafka/write_bytes",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			}
+		    ],
+		    "values": [
+			{
+			    "name": "Data read from File",
+			    "value": "${input.files.read_bytes._sum/(1024*1024)}"
+			},
+			{
+			    "name": "Data sent to Solr",
+			    "value": "${output.solr.write_bytes._sum/(1024*1024)}"
+			},
+			{
+			    "name": "Data sent to Kafka",
+			    "value": "${output.kafka.write_bytes._sum/(1024*1024)}"
+			}
+		    ],
+		    "properties": {
+			"display_unit": "MB",
+			"graph_type": "LINE",
+			"time_range": "1"
+		    }
+		},
+		{
+		    "widget_name": "Parse Errors",
+		    "description": "Parse Errors",
+		    "widget_type": "GRAPH",
+		    "is_visible": true,
+		    "metrics": [
+			{
+			    "name": "filter.error.grok._sum",
+			    "metric_path": "metrics/filter/error/grok",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			},
+			{
+			    "name": "filter.error.truncate._sum",
+			    "metric_path": "metrics/filter/error/truncate",
+			    "service_name": "LOGSEARCH",
+			    "component_name": "LOGSEARCH_LOGFEEDER"
+			}
+		    ],
+		    "values": [
+			{
+			    "name": "Grok Errors",
+			    "value": "${filter.error.grok._sum}"
+			},
+			{
+			    "name": "Logs Truncated",
+			    "value": "${filter.error.truncate._sum}"
+			}
+		    ],
+		    "properties": {
+			"graph_type": "LINE",
+			"time_range": "1"
+		    }
+		}
+	    ]
+	}
+    ]
+}

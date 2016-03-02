@@ -16,98 +16,103 @@
    limitations under the License.
 -->
 <metainfo>
-    <schemaVersion>2.0</schemaVersion>
-    <services>
-        <service>
-            <name>LOGSEARCH</name>
-            <displayName>Log Search</displayName>
-            <comment>Log aggregation, analysis, and visualization for Hadoop</comment>
-            <version>0.5.0</version>
-            
+  <schemaVersion>2.0</schemaVersion>
+  <services>
+    <service>
+      <name>LOGSEARCH</name>
+      <displayName>Log Search</displayName>
+      <comment>Log aggregation, analysis, and visualization for Hadoop</comment>
+      <version>0.5.0</version>
 
-            <components>
-            
-                <component>
-                  <name>LOGSEARCH_MASTER</name>
-                  <timelineAppid>logsearch</timelineAppid>                  
-                  <displayName>Log Search</displayName>
-                  <category>MASTER</category>
-                  <cardinality>1</cardinality>
-                  <commandScript>
-                    <script>scripts/logsearch.py</script>
-                    <scriptType>PYTHON</scriptType>
-                    <timeout>5000</timeout>
-                  </commandScript>
-	              <customCommands>
-        	        <customCommand>
-              		    <name>UPDATE_LOGSEARCH</name>
-                	    <commandScript>
-                  		    <script>scripts/logsearch.py</script>
-                  		    <scriptType>PYTHON</scriptType>
-                  		    <timeout>600</timeout>
-            		    </commandScript>
-                     </customCommand>
-          	      </customCommands>
+      <components>
 
-                </component>
-                
-                <component>
-                  <name>LOGSEARCH_SOLR</name>
-                  <displayName>Solr</displayName>
-                  <category>MASTER</category>
-                  <cardinality>1+</cardinality>
-                  <commandScript>
-                    <script>scripts/solr.py</script>
-                    <scriptType>PYTHON</scriptType>
-                    <timeout>5000</timeout>
-                  </commandScript>
-                </component>
-                
-                <component>
-                  <name>LOGSEARCH_LOGFEEDER</name>
-                  <timelineAppid>logfeeder</timelineAppid>                   
-                  <displayName>Log Feeder</displayName>
-                  <category>SLAVE</category>
-                  <cardinality>ALL</cardinality>
-                  <commandScript>
-                    <script>scripts/logfeeder.py</script>
-                    <scriptType>PYTHON</scriptType>
-                    <timeout>5000</timeout>
-                  </commandScript>
-                  
-	              <customCommands>
-        	        <customCommand>
-              		    <name>UPDATE_LOGFEEDER</name>
-                	    <commandScript>
-                  	    	<script>scripts/logfeeder.py</script>
-                  	    	<scriptType>PYTHON</scriptType>
-                  	    	<timeout>600</timeout>
-            		    </commandScript>
-                     </customCommand>
-          	      </customCommands>
-          	                    
-                </component>                
-                
-            </components>
-            
-             <osSpecifics>
-              <osSpecific>
-                <osFamily>redhat6</osFamily>
-                <packages>
-                   <package><name>wget</name></package>   
-                   <package><name>tar</name></package>  
-                   <package><name>zip</name></package>                     
-                </packages>
-              </osSpecific>
-            </osSpecifics> 
-      	    <configuration-dependencies>
-	        	<config-type>logsearch-config</config-type>
-	        	<config-type>solr-config</config-type>   
-	        	<config-type>logfeeder-config</config-type>
-      	    </configuration-dependencies>
-            <restartRequiredAfterChange>false</restartRequiredAfterChange>
-            <widgetsFileName>widgets.json</widgetsFileName>
-      		<metricsFileName>metrics.json</metricsFileName>                
-        </service>
-    </services>
+        <component>
+          <name>LOGSEARCH_MASTER</name>
+          <timelineAppid>logsearch</timelineAppid>
+          <displayName>Log Search</displayName>
+          <category>MASTER</category>
+          <cardinality>1</cardinality>
+          <commandScript>
+            <script>scripts/logsearch.py</script>
+            <scriptType>PYTHON</scriptType>
+            <timeout>5000</timeout>
+          </commandScript>
+          <customCommands>
+            <customCommand>
+              <name>UPDATE_LOGSEARCH</name>
+              <commandScript>
+                <script>scripts/logsearch.py</script>
+                <scriptType>PYTHON</scriptType>
+                <timeout>600</timeout>
+              </commandScript>
+            </customCommand>
+          </customCommands>
+
+        </component>
+
+        <component>
+          <name>LOGSEARCH_SOLR</name>
+          <displayName>Solr</displayName>
+          <category>MASTER</category>
+          <cardinality>1+</cardinality>
+          <commandScript>
+            <script>scripts/solr.py</script>
+            <scriptType>PYTHON</scriptType>
+            <timeout>5000</timeout>
+          </commandScript>
+        </component>
+
+        <component>
+          <name>LOGSEARCH_LOGFEEDER</name>
+          <timelineAppid>logfeeder</timelineAppid>
+          <displayName>Log Feeder</displayName>
+          <category>SLAVE</category>
+          <cardinality>ALL</cardinality>
+          <commandScript>
+            <script>scripts/logfeeder.py</script>
+            <scriptType>PYTHON</scriptType>
+            <timeout>5000</timeout>
+          </commandScript>
+
+          <customCommands>
+            <customCommand>
+              <name>UPDATE_LOGFEEDER</name>
+              <commandScript>
+                <script>scripts/logfeeder.py</script>
+                <scriptType>PYTHON</scriptType>
+                <timeout>600</timeout>
+              </commandScript>
+            </customCommand>
+          </customCommands>
+
+        </component>
+
+      </components>
+
+      <osSpecifics>
+        <osSpecific>
+          <osFamily>redhat6</osFamily>
+          <packages>
+            <package>
+              <name>wget</name>
+            </package>
+            <package>
+              <name>tar</name>
+            </package>
+            <package>
+              <name>zip</name>
+            </package>
+          </packages>
+        </osSpecific>
+      </osSpecifics>
+      <configuration-dependencies>
+        <config-type>logsearch-config</config-type>
+        <config-type>solr-config</config-type>
+        <config-type>logfeeder-config</config-type>
+      </configuration-dependencies>
+      <restartRequiredAfterChange>false</restartRequiredAfterChange>
+      <widgetsFileName>widgets.json</widgetsFileName>
+      <metricsFileName>metrics.json</metricsFileName>
+    </service>
+  </services>
 </metainfo>

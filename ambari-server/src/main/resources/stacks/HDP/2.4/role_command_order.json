@@ -3,6 +3,9 @@
   "_comment" : "blockedRole-blockedCommand: [blockerRole1-blockerCommand1, blockerRole2-blockerCommand2, ...]",
   "general_deps" : {
     "_comment" : "dependencies for all cases",
+    "LOGSEARCH_SOLR-START" : ["ZOOKEEPER_SERVER-START"],
+    "LOGSEARCH_MASTER-START": ["LOGSEARCH_SOLR-START"],
+    "LOGSEARCH_LOGFEEDER-START": ["LOGSEARCH_SOLR-START", "LOGSEARCH_MASTER-START"],
     "SPARK_THRIFTSERVER-START" : ["HIVE_SERVER-START"]
   }
 }

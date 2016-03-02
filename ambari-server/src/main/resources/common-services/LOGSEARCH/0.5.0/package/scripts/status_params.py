@@ -20,7 +20,6 @@ limitations under the License.
 """
 
 from resource_management import *
-import glob
 
 # config object that holds the status related configurations declared in the -env.xml file
 config = Script.get_config()

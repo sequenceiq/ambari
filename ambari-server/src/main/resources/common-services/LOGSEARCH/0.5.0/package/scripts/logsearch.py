@@ -19,9 +19,8 @@ limitations under the License.
 
 import sys, os, pwd, grp, signal, time
 from resource_management import *
-from subprocess import call
 
-class Master(Script):
+class LogSearch(Script):
 
   #Call setup.sh to install the service
   def install(self, env):
@@ -72,7 +71,7 @@ class Master(Script):
       Execute('cd ' + params.logsearch_dir + '; tar -xvf logsearch-portal.tar.gz', user=params.logsearch_user)
 
 
-  def configure(self, env):
+  def configure(self, env, upgrade_type=None):
     import params
     env.set_params(params)
 
@@ -93,7 +92,7 @@ class Master(Script):
     File(format("{params.logsearch_dir}/solr_configsets/audit_logs/conf/solrconfig.xml"), content=file_content, owner=params.logsearch_user)    
 
   #Call start.sh to start the service
-  def start(self, env):
+  def start(self, env, upgrade_type=None):
 
     #import properties defined in -config.xml file from params class
     import params
@@ -151,7 +150,7 @@ class Master(Script):
     Execute(cmd, user=params.logsearch_user)
 
   #Called to stop the service using the pidfile
-  def stop(self, env):
+  def stop(self, env, upgrade_type=None):
     import params
      
     #import status properties defined in -env.xml file from status_params class  
@@ -188,4 +187,4 @@ class Master(Script):
     self.start(env)
 
 if __name__ == "__main__":
-  Master().execute()
+  LogSearch().execute()
