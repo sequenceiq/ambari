@@ -196,6 +196,11 @@
 			"path":"{{logfeeder_log_dir}}/logfeeder.log"
 		},
 		{
+			"type":"logsearch_perf",
+			"rowtype":"service",
+			"path":"{{logsearch_log_dir}}/logsearch-performance.log"
+		},
+		{
 			"type":"ranger_admin",
 			"rowtype":"service",
 			"path":"{{ranger_admin_log_dir}}/xa_portal.log"
@@ -635,6 +640,7 @@
 					"type":[
 						"logsearch_app",
 						"logsearch_feeder",
+						"logsearch_perf",
 						"ranger_admin",
 						"ranger_dbpatch"
 					]
@@ -924,6 +930,8 @@
 			"destination":"solr",
 			"zk_hosts":"{{zookeeper_quorum}}{{solr_znode}}",
 			"collection":"{{solr_collection_service_logs}}",
+			"number_of_shards": "{{logsearch_numshards}}",
+			"splits_interval_mins": "{{service_logs_collection_splits_interval_mins}}",
 			"conditions":{
 				"fields":{
 					"rowtype":[
@@ -941,6 +949,8 @@
 			"destination":"solr",
 			"zk_hosts":"{{zookeeper_quorum}}{{solr_znode}}",
 			"collection":"{{solr_collection_audit_logs}}",
+			"number_of_shards": "{{logsearch_numshards}}",
+			"splits_interval_mins": "{{audit_logs_collection_splits_interval_mins}}",
 			"conditions":{
 				"fields":{
 					"rowtype":[

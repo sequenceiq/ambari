@@ -35,7 +35,7 @@ class Solr(Script):
     Execute('find '+params.service_packagedir+' -iname "*.sh" | xargs chmod +x')
 
     try: grp.getgrnam(params.solr_group)
-    except KeyError: Group(group_name=params.solr_group) 
+    except KeyError: Group(group_name=params.solr_group)
     
     try: pwd.getpwnam(params.solr_user)
     except KeyError: User(username=params.solr_user, 
@@ -81,7 +81,7 @@ class Solr(Script):
       Execute('cd ' + params.solr_dir + '; ln -s solr-* latest', user=params.solr_user)
     
     #ensure all solr files owned   by solr
-    Execute('chown -R '+params.solr_user + ':' + params.solr_group + ' ' + params.solr_dir)            
+    Execute('chown -R '+ params.solr_user + ':' + params.solr_group + ' ' + params.solr_dir)
        
     Execute ('echo "Solr install complete"')
 
@@ -89,8 +89,26 @@ class Solr(Script):
 
   def configure(self, env, upgrade_type=None):
     import params
+    import status_params
+
     env.set_params(params)
-    
+
+    #This is duplicated because if the machine restarts, the /var/run folder is deleted
+    Directory([params.solr_log_dir, status_params.solr_piddir, params.solr_dir, params.logsearch_solr_conf, params.logsearch_solr_datadir, params.logsearch_solr_data_resources_dir],
+              mode=0755,
+              cd_access='a',
+              owner=params.solr_user,
+              group=params.solr_group,
+              create_parents=True
+              )
+
+    File(params.solr_log,
+         mode=0644,
+         owner=params.solr_user,
+         group=params.solr_group,
+         content=''
+         )
+
     #write content in jinja text field to solr.in.sh
     env_content=InlineTemplate(params.solr_env_content)
     File(format("{logsearch_solr_conf}/solr.in.sh"), content=env_content, owner=params.solr_user)    

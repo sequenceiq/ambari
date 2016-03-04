@@ -28,26 +28,25 @@
     <name>solr.cloudmode</name>
     <value>true</value>
     <description>Whether Solr should be started in Cloud mode</description>
-  </property>  
+  </property>      -->
   
   <property>
     <name>solr.dir</name>
     <value>/opt/solr</value>
     <description>Path to Solr root. If HDPSearch is selected, it will be installed under /opt/lucidworks-hdpsearch/solr/</description>
-  </property>  
+  </property>
 
   <property>
     <name>solr.download.location</name>
     <value>HDPSEARCH</value>
-    <description>Location to download Solr from (e.g. https://archive.apache.org/dist/lucene/solr/5.3.0/solr-5.3.0.tgz). Set this to HDPSEARCH to download HDPSearch from yum repo instead</description>
-  </property>     -->
-  
+    <description>Location to download Solr from (e.g. http://apache.mirrors.lucidnetworks.net/lucene/solr/5.2.1/solr-5.2.1.tgz). Set this to HDPSEARCH to download HDPSearch from yum repo instead</description>
+  </property>
 
   <property>
     <name>solr.znode</name>
     <value>/logsearch</value>
     <description>Zookeeper znode</description>
-  </property>  
+  </property>
 
   <property>
     <name>solr.minmem</name>

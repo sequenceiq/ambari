@@ -66,6 +66,10 @@ class LogFeeder(Script):
     import params  
     if params.logfeeder_downloadlocation == 'RPM':
       Execute('rpm -ivh http://TBD.rpm')
+    elif len(params.logfeeder_downloadlocation) > 5 and params.logfeeder_downloadlocation[:5] == 'file:' :
+      local_file = params.logfeeder_downloadlocation.replace(params.logfeeder_downloadlocation[:5], '')
+      Execute('cd ' + params.logfeeder_dir + '; cp ' + local_file + ' .', user=params.logfeeder_user)
+      Execute('cd ' + params.logfeeder_dir + '; tar -xvf logsearch-logfeeder.tgz', user=params.logfeeder_user)
     else:  
       Execute('cd ' + params.logfeeder_dir + '; wget ' + params.logfeeder_downloadlocation + ' -O logfeeder.tar.gz -a ' + params.logfeeder_log, user=params.logfeeder_user)
       Execute('cd ' + params.logfeeder_dir + '; tar -xvf logfeeder.tar.gz', user=params.logfeeder_user)    
@@ -73,7 +77,26 @@ class LogFeeder(Script):
     
   def configure(self, env, upgrade_type=None):
     import params
+    import status_params
     env.set_params(params)
+
+
+    #Duplicated here, because if the machine restarts /var/run folder is wiped out
+    Directory([params.logfeeder_log_dir, status_params.logfeeder_pid_dir, params.logfeeder_dir],
+              mode=0755,
+              cd_access='a',
+              owner=params.logfeeder_user,
+              group=params.logfeeder_group,
+              create_parents=True
+              )
+
+
+    File(params.logfeeder_log,
+         mode=0644,
+         owner=params.logfeeder_user,
+         group=params.logfeeder_group,
+         content=''
+         )
     
     #write content in jinja text field to system.properties
     env_content=InlineTemplate(params.logfeeder_env_content)
