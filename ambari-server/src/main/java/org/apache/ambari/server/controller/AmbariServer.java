@@ -369,6 +369,8 @@ public class AmbariServer {
       sslConnectorTwoWay.setKeystoreType(configsMap.get(Configuration.KSTR_TYPE_KEY));
       sslConnectorTwoWay.setTruststoreType(configsMap.get(Configuration.TSTR_TYPE_KEY));
       sslConnectorTwoWay.setNeedClientAuth(configs.getTwoWaySsl());
+      sslConnectorTwoWay.setRequestHeaderSize(configs.getHttpRequestHeaderSize());
+      sslConnectorTwoWay.setResponseHeaderSize(configs.getHttpResponseHeaderSize());
 
       //SSL Context Factory
       SslContextFactory contextFactoryOneWay = new SslContextFactory(true);
@@ -385,6 +387,8 @@ public class AmbariServer {
       //Secured connector for 1-way auth
       SslSelectChannelConnector sslConnectorOneWay = new SslSelectChannelConnector(contextFactoryOneWay);
       sslConnectorOneWay.setPort(configs.getOneWayAuthPort());
+      sslConnectorOneWay.setRequestHeaderSize(configs.getHttpRequestHeaderSize());
+      sslConnectorOneWay.setResponseHeaderSize(configs.getHttpResponseHeaderSize());
 
       // because there are two connectors sharing the same pool, cut each's
       // acceptors in half
@@ -485,6 +489,9 @@ public class AmbariServer {
         apiConnector.setPort(configs.getClientApiPort());
         apiConnector.setMaxIdleTime(configs.getConnectionMaxIdleTime());
       }
+
+      apiConnector.setRequestHeaderSize(configs.getHttpRequestHeaderSize());
+      apiConnector.setResponseHeaderSize(configs.getHttpResponseHeaderSize());
 
       // Client Jetty thread pool
       configureJettyThreadPool(server, apiConnector.getAcceptors(), "qtp-ambari-client", configs.getClientThreadPoolSize());
