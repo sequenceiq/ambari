@@ -311,6 +311,11 @@ class ActionQueue(threading.Thread):
       'exitCode': commandresult['exitcode'],
       'status': status,
     })
+
+    if self.config.has_option("logging","log_auto_execute_errors") and isAutoExecuteCommand and roleResult['stderr'] != '':
+      logger.info("Error running AUTO_EXECUTE_COMMAND: " + command['role'] + " " + command['roleCommand']
+                   + " (taskId=" + str(command['taskId']) + ") " + roleResult['stderr'])
+
     if roleResult['stdout'] == '':
       roleResult['stdout'] = 'None'
     if roleResult['stderr'] == '':
