@@ -113,7 +113,18 @@ public class PrepareDisableKerberosServerAction extends AbstractPrepareKerberosS
       actionLog.writeStdOut(String.format("Processing %d components", schCount));
     }
 
-    processServiceComponentHosts(cluster, kerberosDescriptor, schToProcess, identityFilter, dataDirectory, kerberosConfigurations, false);
+    Map<String, Set<String>> propertiesToBeRemoved = new HashMap<>();
+    Map<String, Map<String, String>> originalKerberosConfigurations =
+      processServiceComponentHosts(cluster, kerberosDescriptor, schToProcess, identityFilter, dataDirectory,
+        kerberosConfigurations, propertiesToBeRemoved, false, true);
+
+    Map<String, Collection<String>> configurationsToRemove = new HashMap<String, Collection<String>>();
+    // Fill the configurationsToRemove map with all Kerberos-related configurations.  Values
+    // needed to be kept will have new values from the stack definition and thus pruned from
+    // this map.
+    for (Map.Entry<String, Map<String, String>> entry : originalKerberosConfigurations.entrySet()) {
+      configurationsToRemove.put(entry.getKey(), new HashSet<String>(entry.getValue().keySet()));
+    }
 
     // Add auth-to-local configurations to the set of changes
     Set<String> authToLocalProperties = kerberosDescriptor.getAllAuthToLocalProperties();
@@ -156,20 +167,26 @@ public class PrepareDisableKerberosServerAction extends AbstractPrepareKerberosS
         throw new AmbariException(message);
       }
 
-      Map<String, Collection<String>> configurationsToRemove = new HashMap<String, Collection<String>>();
       File configFile = new File(dataDirectory, KerberosConfigDataFileWriter.DATA_FILE_NAME);
       KerberosConfigDataFileWriter kerberosConfDataFileWriter = null;
 
-      // Fill the configurationsToRemove map with all Kerberos-related configurations.  Values
-      // needed to be kept will have new values from the stack definition and thus pruned from
-      // this map.
-      for (Map.Entry<String, Map<String, String>> entry : kerberosConfigurations.entrySet()) {
-        configurationsToRemove.put(entry.getKey(), new HashSet<String>(entry.getValue().keySet()));
-      }
 
       // Remove cluster-env from the set of configurations to remove since it has no default set
       // or properties and the logic below will remove all from this set - which is not desirable.
       configurationsToRemove.remove("cluster-env");
+
+      // Add propertiesToBeRemoved recommended by stack advisor to configurationsToRemove
+      for (Map.Entry<String, Set<String>> entry : propertiesToBeRemoved.entrySet()) {
+        String configType = entry.getKey();
+        Set<String> properties = entry.getValue();
+
+        Collection<String> propertiesForType = configurationsToRemove.get(configType);
+        if (propertiesForType == null) {
+          configurationsToRemove.put(configType, properties);
+        } else {
+          propertiesForType.addAll(properties);
+        }
+      }
 
       if (!schToProcess.isEmpty()) {
         Set<String> visitedServices = new HashSet<String>();
