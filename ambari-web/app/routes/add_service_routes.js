@@ -292,6 +292,7 @@ module.exports = App.WizardRoute.extend({
     next: function (router) {
       if (App.Cluster.find().objectAt(0).get('isKerberosEnabled')) {
         if (router.get('mainAdminKerberosController.isManualKerberos')) {
+          router.get('wizardStep8Controller').set('wizardController', router.get('addServiceController'));
           router.get('wizardStep8Controller').updateKerberosDescriptor(true);
         } else {
           router.get('kerberosWizardStep2Controller').createKerberosAdminSession(router.get('kerberosWizardStep4Controller.stepConfigs')[0].get('configs'));
