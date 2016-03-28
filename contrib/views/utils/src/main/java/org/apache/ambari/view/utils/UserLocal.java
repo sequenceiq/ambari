@@ -196,7 +196,8 @@ public class UserLocal<T> {
    *
    * @param instanceName : the name of the view instance for which the keys needs to be dropped.
    */
-  public static void dropInstanceConnection(String instanceName) {
+  public static void dropInstanceCache(String instanceName) {
+
     LOG.info("removing all the keys for instanceName : {}", instanceName);
     for (Map<String, Object> cache : viewSingletonObjects.values()) {
       for (Iterator<Map.Entry<String, Object>> it = cache.entrySet().iterator(); it.hasNext(); ) {
