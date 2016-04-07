@@ -117,6 +117,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1248,6 +1250,7 @@ public class KerberosHelperImpl implements KerberosHelper {
     Map<String, Collection<KerberosIdentityDescriptor>> activeIdentities = new HashMap<String, Collection<KerberosIdentityDescriptor>>();
 
     Collection<String> hosts;
+    String ambariServerHostname = "ambari-server";
 
     if (hostName == null) {
       Map<String, Host> hostMap = clusters.getHostsForCluster(clusterName);
@@ -1256,24 +1259,40 @@ public class KerberosHelperImpl implements KerberosHelper {
       } else {
         hosts = hostMap.keySet();
       }
+
+      try {
+        ambariServerHostname = InetAddress.getLocalHost().getHostName();
+        if (!hosts.contains(ambariServerHostname)) {
+          Collection<String> extendedHosts = new ArrayList<>(hosts.size() + 1);
+          extendedHosts.addAll(hosts);
+          extendedHosts.add(ambariServerHostname);
+          hosts = extendedHosts;
+        }
+      } catch (UnknownHostException e) {
+        LOG.warn("Unable to determine Ambari server hostname: {}", e);
+      }
     } else {
       hosts = Collections.singleton(hostName);
     }
 
+    KerberosDescriptor kerberosDescriptor = getKerberosDescriptor(cluster);
+
     if ((hosts != null) && !hosts.isEmpty()) {
-      KerberosDescriptor kerberosDescriptor = getKerberosDescriptor(cluster);
 
       if (kerberosDescriptor != null) {
         Map<String, String> kerberosDescriptorProperties = kerberosDescriptor.getProperties();
 
         for (String hostname : hosts) {
           Map<String, KerberosIdentityDescriptor> hostActiveIdentities = new HashMap<String, KerberosIdentityDescriptor>();
-          List<KerberosIdentityDescriptor> identities = getActiveIdentities(cluster, hostname, serviceName, componentName, kerberosDescriptor);
+          List<KerberosIdentityDescriptor> identities = getActiveIdentities(cluster, ambariServerHostname, hostname,
+            serviceName, componentName, kerberosDescriptor);
 
           if (!identities.isEmpty()) {
             // Calculate the current host-specific configurations. These will be used to replace
             // variables within the Kerberos descriptor data
-            Map<String, Map<String, String>> configurations = calculateConfigurations(cluster, hostname, kerberosDescriptorProperties);
+            Map<String, Map<String, String>> configurations = calculateConfigurations(cluster, hostname.equals
+                (ambariServerHostname) ? null : hostname,
+              kerberosDescriptorProperties);
 
             for (KerberosIdentityDescriptor identity : identities) {
               KerberosPrincipalDescriptor principalDescriptor = identity.getPrincipalDescriptor();
@@ -2250,18 +2269,18 @@ public class KerberosHelperImpl implements KerberosHelper {
    * Returns the active identities for the named service component in the cluster.
    *
    * @param cluster            the relevant cluster (mandatory)
-   * @param hostname           the name of a host for which to find results, null indicates all hosts
+   * @param ambariServerHostname
+   *@param hostname           the name of a host for which to find results, null indicates all hosts
    * @param serviceName        the name of a service for which to find results, null indicates all
-   *                           services
+ *                           services
    * @param componentName      the name of a component for which to find results, null indicates all
-   *                           components
-   * @param kerberosDescriptor the relevant Kerberos Descriptor
-   * @return a list of KerberosIdentityDescriptors representing the active identities for the
+*                           components
+   * @param kerberosDescriptor the relevant Kerberos Descriptor     @return a list of KerberosIdentityDescriptors representing the active identities for the
    * requested service component
    * @throws AmbariException if an error occurs processing the cluster's active identities
    */
   private List<KerberosIdentityDescriptor> getActiveIdentities(Cluster cluster,
-                                                               String hostname,
+                                                               String ambariServerHostname, String hostname,
                                                                String serviceName,
                                                                String componentName,
                                                                KerberosDescriptor kerberosDescriptor)
@@ -2296,6 +2315,21 @@ public class KerberosHelperImpl implements KerberosHelper {
             }
           }
         }
+      }
+    }
+
+    if (hostname.equals(ambariServerHostname)) {
+      try {
+        KerberosDetails kerberosDetails = getKerberosDetails(cluster, null);
+        // append Ambari server principal
+        if (kerberosDetails.createAmbariPrincipal()) {
+          KerberosIdentityDescriptor ambariServerIdentity = kerberosDescriptor.getIdentity(KerberosHelper.AMBARI_IDENTITY_NAME);
+          if (ambariServerIdentity != null) {
+            identities.add(ambariServerIdentity);
+          }
+        }
+      } catch (KerberosInvalidConfigurationException e) {
+        LOG.warn("Unable to append Ambari server principal: {}", e);
       }
     }
 
