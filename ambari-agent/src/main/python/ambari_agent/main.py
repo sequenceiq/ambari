@@ -181,7 +181,7 @@ def stop_agent():
     sys.exit(0)
   except Exception, err:
     if pid == -1:
-      print ("Agent process is not running")
+      Logger.info("Agent process is not running")
     else:
       res = runner.run([AMBARI_SUDO_BINARY, 'kill', '-9', str(pid)])
       if res['exitCode'] != 0:
@@ -294,7 +294,7 @@ def main(heartbeat_stop_callback=None):
     controller.start()
     controller.join()
   if not OSCheck.get_os_family() == OSConst.WINSRV_FAMILY:
-    ExitHelper.execute_cleanup()
+    ExitHelper().execute_cleanup()
     stop_agent()
   logger.info("finished")
 
