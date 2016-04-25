@@ -120,6 +120,14 @@ class RangerAdmin(Script):
   def is_ru_rangeradmin_in_progress(self):
     return os.path.isfile(RangerAdmin.upgrade_marker_file)
 
+  def get_log_folder(self):
+    import params
+    return params.admin_log_dir
+  
+  def get_user(self):
+    import params
+    return params.unix_user
+
 if __name__ == "__main__":
   RangerAdmin().execute()
 

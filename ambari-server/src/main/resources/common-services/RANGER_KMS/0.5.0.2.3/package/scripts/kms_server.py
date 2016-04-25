@@ -77,6 +77,14 @@ class KmsServer(Script):
     setup_kms_db()
     kms()
     setup_java_patch()
+    
+  def get_log_folder(self):
+    import params
+    return params.kms_log_dir
+  
+  def get_user(self):
+    import params
+    return params.kms_user
 
 if __name__ == "__main__":
   KmsServer().execute()
