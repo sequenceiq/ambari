@@ -56,6 +56,62 @@ class TestWebHCatServer(RMFTestCase):
     )
     self.assertNoMoreResources()
 
+  def test_start_default_create_hive_site(self):
+    self.executeScript(self.COMMON_SERVICES_PACKAGE_DIR + "/scripts/webhcat_server.py",
+                       classname = "WebHCatServer",
+                       command = "start",
+                       config_file="default-hive-2.2.json",
+                       hdp_stack_version = "2.2",
+                       target = RMFTestCase.TARGET_COMMON_SERVICES
+                       )
+    self.assertResourceCalled('Directory', '/var/run/webhcat',
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              recursive = True,
+                              mode = 0755,
+                              )
+    self.assertResourceCalled('Directory', '/var/log/webhcat',
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              recursive = True,
+                              mode = 0755,
+                              )
+    self.assertResourceCalled('Directory', '/etc/hive-webhcat/conf',
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              recursive = True,
+                              cd_access = 'a'
+                              )
+    self.assertResourceCalled('XmlConfig', 'webhcat-site.xml',
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              conf_dir = '/etc/hive-webhcat/conf',
+                              configurations = self.getConfig()['configurations']['webhcat-site'],
+                              configuration_attributes = self.getConfig()['configuration_attributes']['webhcat-site']
+                              )
+    self.assertResourceCalled('XmlConfig', 'hive-site.xml',
+                              owner = 'hive',
+                              group = 'hadoop',
+                              conf_dir = '/usr/hdp/current/hive-client/conf',
+                              configurations = self.getConfig()['configurations']['hive-site'],
+                              configuration_attributes = self.getConfig()['configuration_attributes']['hive-site']
+                              )
+    self.assertResourceCalled('File', '/etc/hive-webhcat/conf/webhcat-env.sh',
+                              content = InlineTemplate(self.getConfig()['configurations']['webhcat-env']['content']),
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              )
+    self.assertResourceCalled('Directory', '/usr/hdp/current/hive-webhcat/conf',
+                              cd_access = 'a',
+                              recursive=True
+                              )
+    self.assertResourceCalled('File', '/etc/hive-webhcat/conf/webhcat-log4j.properties',
+                              content = 'log4jproperties\nline2',
+                              owner = 'hcat',
+                              group = 'hadoop',
+                              mode = 0644,
+                              )
+
   def test_stop_default(self):
     self.executeScript(self.COMMON_SERVICES_PACKAGE_DIR + "/scripts/webhcat_server.py",
                        classname = "WebHCatServer",
