@@ -105,16 +105,8 @@ def webhcat():
       configuration_attributes = params.config['configuration_attributes']['yarn-site'],
       owner = params.yarn_user,
       group = params.user_group,    
-      )
-  # make sure hive-site exists even if we're not upgrading and params.version is not available
-  elif Script.is_hdp_stack_greater_or_equal("2.2"):
-    XmlConfig("hive-site.xml",
-        conf_dir = format("/usr/hdp/current/hive-client/conf"),
-        configurations = params.hive_site_config,
-        configuration_attributes = params.config['configuration_attributes']['hive-site'],
-        owner = params.hive_user,
-        group = params.user_group,
-        )
+  )
+  
 
   File(format("{config_dir}/webhcat-env.sh"),
        owner=params.webhcat_user,
