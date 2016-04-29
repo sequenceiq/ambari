@@ -541,6 +541,8 @@ public class Configuration {
   public static final String VIEWS_HTTP_X_XSS_PROTECTION_HEADER_VALUE_KEY = "views.http.x-xss-protection";
   public static final String VIEWS_HTTP_X_XSS_PROTECTION_HEADER_VALUE_DEFAULT = "1; mode=block";
 
+  public static final String ALERTS_SNMP_DISPATCH_UDP_PORT = "alerts.snmp.dispatcher.udp.port";
+
   private static final Logger LOG = LoggerFactory.getLogger(
       Configuration.class);
 
@@ -2466,5 +2468,14 @@ public class Configuration {
       LOG.info("Operations retry enabled. Number of retry attempts: {}", attempts);
     }
     return attempts;
+  }
+
+  /**
+   * Customized UDP port for SNMP dispatcher
+   * @return Integer if property exists else null
+   */
+  public Integer getSNMPUdpBindPort() {
+    String udpPort = properties.getProperty(ALERTS_SNMP_DISPATCH_UDP_PORT);
+    return StringUtils.isEmpty(udpPort) ? null : Integer.parseInt(udpPort);
   }
 }

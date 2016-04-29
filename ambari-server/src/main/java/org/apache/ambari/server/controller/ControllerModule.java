@@ -60,6 +60,7 @@ import org.apache.ambari.server.controller.spi.ResourceProvider;
 import org.apache.ambari.server.controller.utilities.DatabaseChecker;
 import org.apache.ambari.server.notifications.DispatchFactory;
 import org.apache.ambari.server.notifications.NotificationDispatcher;
+import org.apache.ambari.server.notifications.dispatchers.SNMPDispatcher;
 import org.apache.ambari.server.orm.DBAccessor;
 import org.apache.ambari.server.orm.DBAccessorImpl;
 import org.apache.ambari.server.orm.PersistenceType;
@@ -587,7 +588,12 @@ public class ControllerModule extends AbstractModule {
           ClassUtils.getDefaultClassLoader());
 
       try {
-        NotificationDispatcher dispatcher = (NotificationDispatcher) clazz.newInstance();
+        NotificationDispatcher dispatcher;
+        if (clazz.equals(SNMPDispatcher.class)) {
+          dispatcher = (NotificationDispatcher) clazz.getConstructor(Integer.class).newInstance(configuration.getSNMPUdpBindPort());
+        } else {
+          dispatcher = (NotificationDispatcher) clazz.newInstance();
+        }
         dispatchFactory.register(dispatcher.getType(), dispatcher);
         bind((Class<NotificationDispatcher>) clazz).toInstance(dispatcher);
 
