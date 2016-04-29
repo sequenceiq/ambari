@@ -223,4 +223,14 @@ public class HostGroupInfo {
     }
   }
 
+  /**
+   * Removes hostname from group
+   * @param hostname
+   */
+  public void removeHost(String hostname) {
+    synchronized (hostNames) {
+      hostNames.remove(hostname);
+    }
+  }
+
 }
