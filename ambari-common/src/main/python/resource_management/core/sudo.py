@@ -24,6 +24,7 @@ import os
 import tempfile
 import shutil
 import stat
+import random
 from resource_management.core import shell
 from resource_management.core.logger import Logger
 from resource_management.core.exceptions import Fail
@@ -155,21 +156,7 @@ else:
     
   # fp.write replacement
   def create_file(filename, content, encoding=None):
-    """
-    if content is None, create empty file
-    """
-    content = content if content else ""
-    content = content.encode(encoding) if encoding else content
-    
-    tmpf_name = tempfile.gettempdir() + os.sep + tempfile.template + str(time.time())
-    
-    try:
-      with open(tmpf_name, "wb") as fp:
-        fp.write(content)
-        
-      shell.checked_call(["cp", "-f", tmpf_name, filename], sudo=True)
-    finally:
-      os.unlink(tmpf_name)
+      return _create_file(filename, content, True, encoding)
       
   # fp.read replacement
   def read_file(filename, encoding=None):
@@ -227,3 +214,19 @@ else:
   # shutil.copy replacement
   def copy(src, dst):
     shell.checked_call(["sudo", "cp", "-r", src, dst], sudo=True)
+
+# fp.write replacement
+def _create_file(filename, content, withSudo, encoding=None):
+    """
+    if content is None, create empty file
+    """
+    content = content if content else ""
+    content = content.encode(encoding) if encoding else content
+
+    tmpf_name = tempfile.gettempdir() + os.sep + tempfile.template + str(time.time()) + "_" + str(random.randint(0, 1000))
+    try:
+        with open(tmpf_name, "wb") as fp:
+            fp.write(content)
+        shell.checked_call(["cp", "-f", tmpf_name, filename], sudo=withSudo)
+    finally:
+        os.unlink(tmpf_name)
