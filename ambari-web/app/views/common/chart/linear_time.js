@@ -175,6 +175,14 @@ App.ChartLinearTimeView = Ember.View.extend(App.ExportMetricsMixin, {
     return this.get('_containerSelector') + this.get('popupSuffix');
   }.property('_containerSelector', 'popupSuffix'),
 
+  /**
+   * @type {boolean}
+   */
+  isRequestRunning: function() {
+    var requestsArrayName = this.get('isPopup') ? 'runningPopupRequests' : 'runningRequests';
+    return this.get(requestsArrayName).mapProperty('ajaxIndex').contains(this.get('ajaxIndex'));
+  }.property('runningPopupRequests', 'runningRequests'),
+
   didInsertElement: function () {
     var self = this;
     this.setYAxisFormatter();
