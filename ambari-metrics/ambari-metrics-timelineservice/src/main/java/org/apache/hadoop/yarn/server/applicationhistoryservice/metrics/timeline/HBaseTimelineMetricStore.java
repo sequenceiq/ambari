@@ -81,8 +81,8 @@ public class HBaseTimelineMetricStore extends AbstractService implements Timelin
     if (!isInitialized) {
       hBaseAccessor = new PhoenixHBaseAccessor(hbaseConf, metricsConf);
       hBaseAccessor.initMetricSchema();
-
-      hBaseAccessor.initPolicies();
+      // Initialize policies before TTL update
+      hBaseAccessor.initPoliciesAndTTL();
 
       if (Boolean.parseBoolean(metricsConf.get(USE_GROUPBY_AGGREGATOR_QUERIES, "true"))) {
         LOG.info("Using group by aggregators for aggregating host and cluster metrics.");
