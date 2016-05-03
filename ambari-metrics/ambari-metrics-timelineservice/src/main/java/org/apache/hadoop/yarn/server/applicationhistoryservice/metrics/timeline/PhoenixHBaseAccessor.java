@@ -361,10 +361,7 @@ public class PhoenixHBaseAccessor {
   protected void initPoliciesAndTTL() {
     boolean enableNormalizer = hbaseConf.getBoolean("hbase.normalizer.enabled", true);
     boolean enableFifoCompaction = metricsConf.getBoolean("timeline.metrics.hbase.fifo.compaction.enabled", true);
-
-    if (!enableNormalizer && !enableFifoCompaction) {
-      return;
-    }
+    
 
     HBaseAdmin hBaseAdmin = null;
     try {
