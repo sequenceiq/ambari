@@ -205,6 +205,9 @@ public class TimelineMetricConfiguration {
   public static final String AGGREGATORS_SKIP_BLOCK_CACHE =
     "timeline.metrics.aggregators.skip.blockcache.enabled";
 
+  public static final String TIMELINE_METRICS_TABLES_DURABILITY =
+    "timeline.metrics.tables.durability";
+
   public static final String HOST_APP_ID = "HOST";
 
   private Configuration hbaseConf;
