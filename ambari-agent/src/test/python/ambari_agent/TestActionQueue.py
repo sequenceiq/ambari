@@ -988,7 +988,11 @@ class TestActionQueue(TestCase):
       'structuredOut': '',
       'status': 'FAILED'
     }
-    time_mock.side_effect = [4, 8, 10, 14, 18, 22]
+
+    times_arr = [8, 10, 14, 18, 22, 26, 30, 34]
+    if self.logger.isEnabledFor(logging.INFO):
+      times_arr.insert(0, 4)
+    time_mock.side_effect = times_arr
 
     def side_effect(command, tmpoutfile, tmperrfile, override_output_files=True, retry=False):
       return python_execution_result_dict
@@ -1002,7 +1006,7 @@ class TestActionQueue(TestCase):
     self.assertTrue(runCommand_mock.called)
     self.assertEqual(2, runCommand_mock.call_count)
     self.assertEqual(1, sleep_mock.call_count)
-    sleep_mock.assert_has_calls([call(2)], False)
+    sleep_mock.assert_has_calls([call(1)], False)
     runCommand_mock.assert_has_calls([
       call(command, '/tmp/ambari-agent/output-19.txt', '/tmp/ambari-agent/errors-19.txt', override_output_files=True, retry=False),
       call(command, '/tmp/ambari-agent/output-19.txt', '/tmp/ambari-agent/errors-19.txt', override_output_files=False, retry=True)])
@@ -1084,7 +1088,7 @@ class TestActionQueue(TestCase):
     CustomServiceOrchestrator.runCommand.return_value = {'exitcode' : 0,
                                                          'stdout': 'out-11',
                                                          'stderr' : 'err-13'}
-    
+
     dummy_controller = MagicMock()
     actionQueue = ActionQueue(AmbariConfig(), dummy_controller)
 
@@ -1092,13 +1096,13 @@ class TestActionQueue(TestCase):
     actionQueue.put([execute_command])
     actionQueue.processBackgroundQueueSafeEmpty();
     actionQueue.processStatusCommandQueueSafeEmpty();
-    
+
     #assert that python execturor start
     self.assertTrue(runCommand_mock.called)
     runningCommand = actionQueue.commandStatuses.current_state.get(execute_command['taskId'])
     self.assertTrue(runningCommand is not None)
     self.assertEqual(runningCommand[1]['status'], ActionQueue.IN_PROGRESS_STATUS)
-    
+
     report = actionQueue.result()
     self.assertEqual(len(report['reports']),1)
 
@@ -1108,23 +1112,23 @@ class TestActionQueue(TestCase):
   @patch.object(StackVersionsFileHandler, "read_stack_version")
   def test_execute_python_executor(self, read_stack_version_mock, resolve_script_path_mock,
                                    get_py_executor_mock):
-    
+
     dummy_controller = MagicMock()
     cfg = AmbariConfig()
     cfg.set('agent', 'tolerate_download_failures', 'true')
     cfg.set('agent', 'prefix', '.')
     cfg.set('agent', 'cache_dir', 'background_tasks')
-    
+
     actionQueue = ActionQueue(cfg, dummy_controller)
     pyex = PythonExecutor(actionQueue.customServiceOrchestrator.tmp_dir, actionQueue.customServiceOrchestrator.config)
     patch_output_file(pyex)
     get_py_executor_mock.return_value = pyex
     actionQueue.customServiceOrchestrator.dump_command_to_json = MagicMock()
-   
+
     result = {}
     lock = threading.RLock()
     complete_done = threading.Condition(lock)
-    
+
     def command_complete_w(process_condensed_result, handle):
       with lock:
         result['command_complete'] = {'condensed_result' : copy.copy(process_condensed_result),
@@ -1138,27 +1142,27 @@ class TestActionQueue(TestCase):
     actionQueue.put([self.background_command])
     actionQueue.processBackgroundQueueSafeEmpty();
     actionQueue.processStatusCommandQueueSafeEmpty();
-    
+
     with lock:
       complete_done.wait(0.1)
-      
+
       finished_status = result['command_complete']['command_status']
       self.assertEqual(finished_status['status'], ActionQueue.COMPLETED_STATUS)
       self.assertEqual(finished_status['stdout'], 'process_out')
       self.assertEqual(finished_status['stderr'], 'process_err')
       self.assertEqual(finished_status['exitCode'], 0)
-      
-    
+
+
     runningCommand = actionQueue.commandStatuses.current_state.get(self.background_command['taskId'])
     self.assertTrue(runningCommand is not None)
-    
+
     report = actionQueue.result()
     self.assertEqual(len(report['reports']),1)
     self.assertEqual(report['reports'][0]['stdout'],'process_out')
 #    self.assertEqual(report['reports'][0]['structuredOut'],'{"a": "b."}')
-    
-    
-  
+
+
+
   cancel_background_command = {
     "commandType":"CANCEL_COMMAND",
     "role":"AMBARI_SERVER_ACTION",
@@ -1199,5 +1203,4 @@ def wraped(func, before = None, after = None):
       if(after is not None):
         after(*args, **kwargs)
       return ret
-    return wrapper   
-  
+    return wrapper
