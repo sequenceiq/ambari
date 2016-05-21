@@ -492,6 +492,13 @@ public class Configuration {
   public static final String SYS_PREPPED_HOSTS_DEFAULT = "false";
 
   /**
+   * Indicates that NO INSTALL command is generated for service components. packages.pre.installed should be enabled
+   * as well.
+   */
+  public static final String NO_INSTALL_COMMANDS = "no_install_commands.for_server_components";
+  public static final String NO_INSTALL_COMMANDS_DEFAULT = "true";
+
+  /**
    * !!! TODO: For embedded server only - should be removed later
    */
   private static final String LDAP_PRIMARY_URL_DEFAULT = "localhost:33389";
@@ -1287,6 +1294,10 @@ public class Configuration {
 
   public String areHostsSysPrepped(){
     return properties.getProperty(SYS_PREPPED_HOSTS_KEY, SYS_PREPPED_HOSTS_DEFAULT);
+  }
+
+  public String noInstallCommandsForServiceComponents(){
+    return properties.getProperty(NO_INSTALL_COMMANDS, NO_INSTALL_COMMANDS_DEFAULT);
   }
 
   public String getStackAdvisorScript() {

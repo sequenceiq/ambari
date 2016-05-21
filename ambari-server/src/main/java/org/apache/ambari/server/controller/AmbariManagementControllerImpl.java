@@ -2660,8 +2660,18 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
             Map<String, Map<String, String>> configTags =
                 findConfigurationTagsWithOverrides(cluster, host.getHostName());
 
-            createHostAction(cluster, stage, scHost, configurations, configurationAttributes, configTags,
-                             roleCommand, requestParameters, event);
+            // Skip INSTALL command for service components if packages.pre.installed = true and no_install_commands
+            // .for_server_components = true
+            if (newState == State.INSTALLED && !isClientComponent(cluster, scHost)
+              && "INITIAL_INSTALL".equals(requestProperties.get("phase"))
+                && Boolean.parseBoolean(configs.areHostsSysPrepped())
+                  && Boolean.parseBoolean(configs.noInstallCommandsForServiceComponents()) ) {
+              LOG.info("SKIPPING HOST INSTALL TASK");
+            } else {
+              createHostAction(cluster, stage, scHost, configurations, configurationAttributes, configTags,
+                roleCommand, requestParameters, event);
+            }
+
           }
         }
       }
@@ -2740,6 +2750,18 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
             return true;
           }
         }
+      }
+    }
+    return false;
+  }
+
+
+  private boolean isClientComponent(Cluster cluster, ServiceComponentHost sch) throws AmbariException {
+    Service service = cluster.getService(sch.getServiceName());
+    if (service != null) {
+      ServiceComponent serviceComponent = service.getServiceComponent(sch.getServiceComponentName());
+      if (serviceComponent != null) {
+        return serviceComponent.isClientComponent();
       }
     }
     return false;
