@@ -46,6 +46,7 @@ import org.apache.ambari.server.state.CommandScriptDefinition;
 import org.apache.ambari.server.state.ComponentInfo;
 import org.apache.ambari.server.state.Config;
 import org.apache.ambari.server.state.ConfigHelper;
+import org.apache.ambari.server.state.DesiredConfig;
 import org.apache.ambari.server.state.Host;
 import org.apache.ambari.server.state.HostState;
 import org.apache.ambari.server.state.Service;
@@ -111,7 +112,7 @@ public class HeartbeatMonitor implements Runnable {
   }
 
   public AgentRequests getAgentRequests() {
-    return this.agentRequests;
+    return agentRequests;
   }
 
   @Override
@@ -212,6 +213,7 @@ public class HeartbeatMonitor implements Runnable {
     List<StatusCommand> cmds = new ArrayList<StatusCommand>();
 
     for (Cluster cl : clusters.getClustersForHost(hostname)) {
+      Map<String, DesiredConfig> desiredConfigs = cl.getDesiredConfigs();
       for (ServiceComponentHost sch : cl.getServiceComponentHosts(hostname)) {
         switch (sch.getState()) {
           case INIT:
@@ -221,7 +223,7 @@ public class HeartbeatMonitor implements Runnable {
             //don't send commands until component is installed at least
             continue;
           default:
-            StatusCommand statusCmd = createStatusCommand(hostname, cl, sch);
+            StatusCommand statusCmd = createStatusCommand(hostname, cl, sch, desiredConfigs);
             cmds.add(statusCmd);
         }
 
@@ -235,7 +237,7 @@ public class HeartbeatMonitor implements Runnable {
    * @throws AmbariException
    */
   private StatusCommand createStatusCommand(String hostname, Cluster cluster,
-                               ServiceComponentHost sch) throws AmbariException {
+      ServiceComponentHost sch, Map<String, DesiredConfig> desiredConfigs) throws AmbariException {
     String serviceName = sch.getServiceName();
     String componentName = sch.getServiceComponentName();
     StackId stackId = cluster.getDesiredStackVersion();
@@ -310,7 +312,7 @@ public class HeartbeatMonitor implements Runnable {
 
     // If Agent wants the command and the States differ
     statusCmd.setDesiredState(sch.getDesiredState());
-    statusCmd.setHasStaleConfigs(configHelper.isStaleConfigs(sch));
+    statusCmd.setHasStaleConfigs(configHelper.isStaleConfigs(sch, desiredConfigs));
     if (getAgentRequests().shouldSendExecutionDetails(hostname, componentName)) {
       LOG.info(componentName + " is at " + sch.getState()
                + " adding more payload per agent ask from " + sch.getHostName());
