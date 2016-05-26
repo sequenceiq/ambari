@@ -44,6 +44,18 @@ class TestServiceCheck(RMFTestCase):
                           checked_call_mocks = [(0, "some test text, appTrackingUrl=http:"
                                 "//c6402.ambari.apache.org:8088/proxy/application_1429885383763_0001/, some test text")]
     )
+    self.assertResourceCalled('HdfsResource', '/user/ambari-qa',
+                              security_enabled = False,
+                              hadoop_bin_dir = '/usr/bin',
+                              keytab = UnknownConfigurationMock(),
+                              kinit_path_local = '/usr/bin/kinit',
+                              user = 'hdfs',
+                              mode = 0770,
+                              owner = 'ambari-qa',
+                              action = ['create_on_execute'], hdfs_resource_ignore_file='/var/lib/ambari-agent/data/.hdfs_resource_ignore', hdfs_site=self.getConfig()['configurations']['hdfs-site'], principal_name=UnknownConfigurationMock(), default_fs='hdfs://c6401.ambari.apache.org:8020',
+                              hadoop_conf_dir = '/etc/hadoop/conf',
+                              type = 'directory',
+                              )
     self.assertNoMoreResources()
 
 
@@ -62,5 +74,16 @@ class TestServiceCheck(RMFTestCase):
                           checked_call_mocks = [(0, "some test text, appTrackingUrl=http:"
                                "//c6402.ambari.apache.org:8088/proxy/application_1429885383763_0001/, some test text")]
     )
-
+    self.assertResourceCalled('HdfsResource', '/user/ambari-qa',
+                              security_enabled = True,
+                              hadoop_bin_dir = '/usr/bin',
+                              keytab = '/etc/security/keytabs/hdfs.headless.keytab',
+                              kinit_path_local = '/usr/bin/kinit',
+                              user = 'hdfs',
+                              mode = 0770,
+                              owner = 'ambari-qa',
+                              action = ['create_on_execute'], hdfs_resource_ignore_file='/var/lib/ambari-agent/data/.hdfs_resource_ignore', hdfs_site=self.getConfig()['configurations']['hdfs-site'], principal_name='hdfs', default_fs='hdfs://c6401.ambari.apache.org:8020',
+                              hadoop_conf_dir = '/etc/hadoop/conf',
+                              type = 'directory',
+                              )
     self.assertNoMoreResources()
