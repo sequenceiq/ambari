@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,7 +64,8 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.AGGREGATE_TABLE_SPLIT_POINTS;
-import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.TIMELINE_METRICS_TABLES_DURABILITY;
+import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.TIMELINE_METRICS_PRECISION_TABLE_DURABILITY;
+import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.TIMELINE_METRICS_AGGREGATE_TABLES_DURABILITY;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.AGGREGATORS_SKIP_BLOCK_CACHE;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.CLUSTER_DAILY_TABLE_TTL;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.CLUSTER_HOUR_TABLE_TTL;
@@ -80,7 +82,6 @@ import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.ti
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.OUT_OFF_BAND_DATA_TIME_ALLOWANCE;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.PRECISION_TABLE_SPLIT_POINTS;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.TimelineMetricConfiguration.PRECISION_TABLE_TTL;
-import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.query.PhoenixTransactSQL.ALTER_SQL;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.query.PhoenixTransactSQL.CREATE_METRICS_AGGREGATE_TABLE_SQL;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.query.PhoenixTransactSQL.CREATE_METRICS_CLUSTER_AGGREGATE_GROUPED_TABLE_SQL;
 import static org.apache.hadoop.yarn.server.applicationhistoryservice.metrics.timeline.query.PhoenixTransactSQL.CREATE_METRICS_CLUSTER_AGGREGATE_TABLE_SQL;
@@ -131,6 +132,7 @@ public class PhoenixHBaseAccessor {
   private final long outOfBandTimeAllowance;
   private final boolean skipBlockCacheForAggregatorsEnabled;
   private final String timelineMetricsTablesDurability;
+  private final String timelineMetricsPrecisionTableDurability;
 
   static final String HSTORE_COMPACTION_CLASS_KEY =
     "hbase.hstore.defaultengine.compactionpolicy.class";
@@ -166,7 +168,8 @@ public class PhoenixHBaseAccessor {
     this.outOfBandTimeAllowance = metricsConf.getLong(OUT_OFF_BAND_DATA_TIME_ALLOWANCE,
       DEFAULT_OUT_OF_BAND_TIME_ALLOWANCE);
     this.skipBlockCacheForAggregatorsEnabled = metricsConf.getBoolean(AGGREGATORS_SKIP_BLOCK_CACHE, false);
-    this.timelineMetricsTablesDurability = metricsConf.get(TIMELINE_METRICS_TABLES_DURABILITY, "");
+    this.timelineMetricsTablesDurability = metricsConf.get(TIMELINE_METRICS_AGGREGATE_TABLES_DURABILITY, "");
+    this.timelineMetricsPrecisionTableDurability = metricsConf.get(TIMELINE_METRICS_PRECISION_TABLE_DURABILITY, "");
 
     tableTTL.put(METRICS_RECORD_TABLE_NAME, metricsConf.get(PRECISION_TABLE_TTL, "86400"));                             //1 day
     tableTTL.put(METRICS_AGGREGATE_MINUTE_TABLE_NAME, metricsConf.get(HOST_MINUTE_TABLE_TTL, "604800"));                //7 days
@@ -398,23 +401,45 @@ public class PhoenixHBaseAccessor {
             }
           }
 
-          if (!timelineMetricsTablesDurability.isEmpty()) {
-            LOG.info("Setting WAL option " + timelineMetricsTablesDurability + " for table : " + tableName);
-            boolean validDurability = true;
-            if ("SKIP_WAL".equals(timelineMetricsTablesDurability)) {
-              tableDescriptor.setDurability(Durability.SKIP_WAL);
-            } else if ("SYNC_WAL".equals(timelineMetricsTablesDurability)) {
-              tableDescriptor.setDurability(Durability.SYNC_WAL);
-            } else if ("ASYNC_WAL".equals(timelineMetricsTablesDurability)) {
-              tableDescriptor.setDurability(Durability.ASYNC_WAL);
-            } else if ("FSYNC_WAL".equals(timelineMetricsTablesDurability)) {
-              tableDescriptor.setDurability(Durability.FSYNC_WAL);
-            } else {
-              LOG.info("Unknown value for " + TIMELINE_METRICS_TABLES_DURABILITY + " : " + timelineMetricsTablesDurability);
-              validDurability = false;
+          if (METRICS_RECORD_TABLE_NAME.equals(tableName)) {
+            if (!timelineMetricsPrecisionTableDurability.isEmpty()) {
+              LOG.info("Setting WAL option " + timelineMetricsPrecisionTableDurability + " for table : " + tableName);
+              boolean validDurability = true;
+              if ("SKIP_WAL".equals(timelineMetricsPrecisionTableDurability)) {
+                tableDescriptor.setDurability(Durability.SKIP_WAL);
+              } else if ("SYNC_WAL".equals(timelineMetricsPrecisionTableDurability)) {
+                tableDescriptor.setDurability(Durability.SYNC_WAL);
+              } else if ("ASYNC_WAL".equals(timelineMetricsPrecisionTableDurability)) {
+                tableDescriptor.setDurability(Durability.ASYNC_WAL);
+              } else if ("FSYNC_WAL".equals(timelineMetricsPrecisionTableDurability)) {
+                tableDescriptor.setDurability(Durability.FSYNC_WAL);
+              } else {
+                LOG.info("Unknown value for " + TIMELINE_METRICS_PRECISION_TABLE_DURABILITY + " : " + timelineMetricsPrecisionTableDurability);
+                validDurability = false;
+              }
+              if (validDurability) {
+                modifyTable = true;
+              }
             }
-            if (validDurability) {
-              modifyTable = true;
+          } else {
+            if (!timelineMetricsTablesDurability.isEmpty()) {
+              LOG.info("Setting WAL option " + timelineMetricsTablesDurability + " for table : " + tableName);
+              boolean validDurability = true;
+              if ("SKIP_WAL".equals(timelineMetricsTablesDurability)) {
+                tableDescriptor.setDurability(Durability.SKIP_WAL);
+              } else if ("SYNC_WAL".equals(timelineMetricsTablesDurability)) {
+                tableDescriptor.setDurability(Durability.SYNC_WAL);
+              } else if ("ASYNC_WAL".equals(timelineMetricsTablesDurability)) {
+                tableDescriptor.setDurability(Durability.ASYNC_WAL);
+              } else if ("FSYNC_WAL".equals(timelineMetricsTablesDurability)) {
+                tableDescriptor.setDurability(Durability.FSYNC_WAL);
+              } else {
+                LOG.info("Unknown value for " + TIMELINE_METRICS_AGGREGATE_TABLES_DURABILITY + " : " + timelineMetricsTablesDurability);
+                validDurability = false;
+              }
+              if (validDurability) {
+                modifyTable = true;
+              }
             }
           }
 
@@ -499,6 +524,12 @@ public class PhoenixHBaseAccessor {
         UPSERT_METRICS_SQL, METRICS_RECORD_TABLE_NAME));
 
       for (TimelineMetric metric : timelineMetrics) {
+
+        if (CollectionUtils.isNotEmpty(AggregatorUtils.whitelistedMetrics) &&
+          !AggregatorUtils.whitelistedMetrics.contains(metric.getMetricName())) {
+          continue;
+        }
+
         if (Math.abs(currentTime - metric.getStartTime()) > outOfBandTimeAllowance) {
           // If timeseries start time is way in the past : discard
           LOG.debug("Discarding out of band timeseries, currentTime = "

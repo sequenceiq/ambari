@@ -205,8 +205,14 @@ public class TimelineMetricConfiguration {
   public static final String AGGREGATORS_SKIP_BLOCK_CACHE =
     "timeline.metrics.aggregators.skip.blockcache.enabled";
 
-  public static final String TIMELINE_METRICS_TABLES_DURABILITY =
-    "timeline.metrics.tables.durability";
+  public static final String TIMELINE_METRICS_PRECISION_TABLE_DURABILITY =
+    "timeline.metrics.precision.table.durability";
+
+  public static final String TIMELINE_METRICS_AGGREGATE_TABLES_DURABILITY =
+      "timeline.metrics.aggregate.tables.durability";
+
+  public static final String TIMELINE_METRICS_WHITELIST_FILE =
+    "timeline.metrics.whitelist.file";
 
   public static final String HOST_APP_ID = "HOST";
 
