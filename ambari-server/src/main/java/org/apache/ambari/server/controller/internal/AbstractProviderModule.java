@@ -62,7 +62,11 @@ import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.controller.utilities.PredicateBuilder;
 import org.apache.ambari.server.controller.utilities.PropertyHelper;
 import org.apache.ambari.server.controller.utilities.StreamProvider;
+import org.apache.ambari.server.events.ClusterConfigChangedEvent;
+import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.state.Cluster;
+import org.apache.ambari.server.state.Clusters;
+import org.apache.ambari.server.state.ConfigHelper;
 import org.apache.ambari.server.state.DesiredConfig;
 import org.apache.ambari.server.state.HostState;
 import org.apache.ambari.server.state.Service;
@@ -71,6 +75,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.eventbus.Subscribe;
 import com.google.inject.Inject;
 
 /**
@@ -102,7 +107,7 @@ public abstract class AbstractProviderModule implements ProviderModule,
 
   private static final Map<String, Map<String, String[]>> jmxDesiredProperties = new HashMap<String, Map<String, String[]>>();
   private volatile Map<String, String> clusterHdfsSiteConfigVersionMap = new HashMap<String, String>();
-  private volatile Map<String, String> clusterJmxProtocolMap = new HashMap<String, String>();
+  private volatile Map<String, String> clusterJmxProtocolMap = new ConcurrentHashMap<>();
   private volatile Set<String> metricServerHosts = new HashSet<String>();
   private volatile String clusterMetricServerPort = null;
   private volatile String clusterMetricServerVipPort = null;
@@ -183,6 +188,14 @@ public abstract class AbstractProviderModule implements ProviderModule,
   TimelineMetricCacheProvider metricCacheProvider;
 
   /**
+   * Used to respond to the following events:
+   * <ul>
+   * <li>{@link ClusterConfigChangedEvent}
+   */
+  @Inject
+  protected AmbariEventPublisher eventPublisher;
+
+  /**
    * The map of host components.
    */
   private Map<String, Map<String, String>> clusterHostComponentMap;
@@ -220,6 +233,11 @@ public abstract class AbstractProviderModule implements ProviderModule,
     }
     if (metricCacheProvider == null && managementController != null) {
       metricCacheProvider = managementController.getTimelineMetricCacheProvider();
+    }
+
+    if (null == eventPublisher && null != managementController) {
+      eventPublisher = managementController.getAmbariEventPublisher();
+      eventPublisher.register(this);
     }
   }
 
@@ -843,48 +861,36 @@ public abstract class AbstractProviderModule implements ProviderModule,
       value.substring(value.lastIndexOf(":") + 1, value.length()) : value;
   }
 
+  /**
+   * Gets the desired configuration version tag for the given cluster and config
+   * type.
+   *
+   * @param clusterName
+   *          the cluster name
+   * @param configType
+   *          the configuration type (for example {@value hdfs-site}).
+   * @return
+   */
   private String getDesiredConfigVersion(String clusterName,
-                                         String configType) throws
-      NoSuchParentResourceException, UnsupportedPropertyException,
-      SystemException {
+      String configType) {
 
-    // Get config version tag
-    ResourceProvider clusterResourceProvider = getResourceProvider(Resource.Type.Cluster);
-    Predicate basePredicate = new PredicateBuilder()
-      .property(ClusterResourceProvider.CLUSTER_NAME_PROPERTY_ID).equals(clusterName)
-      .toPredicate();
+    String versionTag = ConfigHelper.FIRST_VERSION_TAG;
 
-    Set<Resource> clusterResource = null;
     try {
+      Clusters clusters = managementController.getClusters();
+      Cluster cluster = clusters.getCluster(clusterName);
+      Map<String, DesiredConfig> desiredConfigs = cluster.getDesiredConfigs();
 
-      Set<String> propertyIds = new HashSet<String>();
-      propertyIds.add(ClusterResourceProvider.CLUSTER_NAME_PROPERTY_ID);
-      propertyIds.add(ClusterResourceProvider.CLUSTER_DESIRED_CONFIGS_PROPERTY_ID);
-
-      Map<String, String> requestInfoProperties = new HashMap<String, String>();
-      requestInfoProperties.put(ClusterResourceProvider.GET_IGNORE_PERMISSIONS_PROPERTY_ID, "true");
-
-      Request readRequest = PropertyHelper.getReadRequest(propertyIds,
-          requestInfoProperties, null, null, null);
-
-      clusterResource = clusterResourceProvider.getResources(readRequest, basePredicate);
-    } catch (NoSuchResourceException e) {
-      LOG.error("Resource for the desired config not found. " + e);
-    }
-
-    String versionTag = "version1";
-    if (clusterResource != null) {
-      for (Resource resource : clusterResource) {
-        Map<String, Object> configs =
-            resource.getPropertiesMap().get(ClusterResourceProvider.CLUSTER_DESIRED_CONFIGS_PROPERTY_ID);
-        if (configs != null) {
-          DesiredConfig config = (DesiredConfig) configs.get(configType);
-          if (config != null) {
-            versionTag = config.getTag();
-          }
-        }
+      DesiredConfig config = desiredConfigs.get(configType);
+      if (config != null) {
+        versionTag = config.getTag();
       }
+    } catch (AmbariException ambariException) {
+      LOG.error(
+          "Unable to lookup the desired configuration tag for {} on cluster {}, defaulting to {}",
+          configType, clusterName, versionTag, ambariException);
     }
+
     return versionTag;
   }
   // TODO get configs using ConfigHelper
@@ -1045,7 +1051,11 @@ public abstract class AbstractProviderModule implements ProviderModule,
 
   @Override
   public String getJMXProtocol(String clusterName, String componentName) {
-    String jmxProtocolString = clusterJmxProtocolMap.get(clusterName);
+    String mapKey = String.format("%s-%s", clusterName, componentName);
+    String jmxProtocolString = clusterJmxProtocolMap.get(mapKey);
+    if (null != jmxProtocolString) {
+      return jmxProtocolString;
+    }
 
     try {
       if (componentName.equals("NAMENODE") || componentName.equals("RESOURCEMANAGER") || componentName.equals("JOURNALNODE")) {
@@ -1059,7 +1069,6 @@ public abstract class AbstractProviderModule implements ProviderModule,
               newSiteConfigVersion, config,
               jmxDesiredProperties.get(componentName));
           jmxProtocolString = getJMXProtocolString(protocolMap.get(componentName));
-          clusterJmxProtocolMap.put(clusterName, jmxProtocolString);
         }
       } else {
         jmxProtocolString = "http";
@@ -1084,6 +1093,7 @@ public abstract class AbstractProviderModule implements ProviderModule,
       LOG.debug("JMXProtocol = " + jmxProtocolString + ", for clusterName=" + clusterName +
           ", componentName = " + componentName);
     }
+    clusterJmxProtocolMap.put(mapKey, jmxProtocolString);
     return jmxProtocolString;
   }
 
@@ -1093,6 +1103,18 @@ public abstract class AbstractProviderModule implements ProviderModule,
     } else {
       return "http";
     }
+  }
+
+  /**
+   * Handles {@link ClusterConfigChangedEvent} which means that some caches
+   * should invalidate.
+   *
+   * @param event
+   *          the change event.
+   */
+  @Subscribe
+  public void onConfigurationChangedEvent(ClusterConfigChangedEvent event) {
+    clusterJmxProtocolMap.clear();
   }
 
 }

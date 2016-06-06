@@ -110,8 +110,12 @@ public abstract class AmbariEvent {
     /**
      * The cluster was renamed.
      */
-    CLUSTER_RENAME;
+    CLUSTER_RENAME,
 
+    /**
+     * Cluster configuration changed.
+     */
+    CLUSTER_CONFIG_CHANGED;
   }
 
   /**

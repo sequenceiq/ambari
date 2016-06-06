@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.ambari.server.events.ClusterConfigChangedEvent;
+import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.orm.dao.ClusterDAO;
 import org.apache.ambari.server.orm.dao.ServiceConfigDAO;
 import org.apache.ambari.server.orm.entities.ClusterConfigEntity;
@@ -69,6 +71,9 @@ public class ConfigImpl implements Config {
 
   @Inject
   private ServiceConfigDAO serviceConfigDAO;
+
+  @Inject
+  private AmbariEventPublisher eventPublisher;
 
   @AssistedInject
   public ConfigImpl(@Assisted Cluster cluster, @Assisted String type, @Assisted Map<String, String> properties,
@@ -408,6 +413,11 @@ public class ConfigImpl implements Config {
       cluster.getClusterGlobalLock().writeLock().unlock();
     }
 
+    // broadcast the change event for the configuration
+    ClusterConfigChangedEvent event = new ClusterConfigChangedEvent(cluster.getClusterName(),
+        getType(), getTag(), getVersion());
+
+    eventPublisher.publish(event);
   }
 
 }

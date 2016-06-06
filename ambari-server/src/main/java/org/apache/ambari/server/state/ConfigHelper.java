@@ -54,7 +54,6 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.persist.Transactional;
-
 /**
  * Helper class that works with config traversals.
  */
@@ -88,6 +87,11 @@ public class ConfigHelper {
 
   public static final String HTTP_ONLY = "HTTP_ONLY";
   public static final String HTTPS_ONLY = "HTTPS_ONLY";
+
+  /**
+   * The tag given to newly created versions.
+   */
+  public static final String FIRST_VERSION_TAG = "version1";
 
   /**
    * Used to ensure that methods which rely on the completion of
@@ -802,7 +806,7 @@ public class ConfigHelper {
                                String authenticatedUserName,
                                String serviceVersionNote) throws AmbariException {
 
-    String tag = "version1";
+    String tag = FIRST_VERSION_TAG;
     if (cluster.getConfigsByType(configType) != null) {
       tag = "version" + System.currentTimeMillis();
     }
@@ -873,7 +877,7 @@ public class ConfigHelper {
 
     for (Map.Entry<String, Map<String, String>> entry : batchProperties.entrySet()) {
       String type = entry.getKey();
-      String tag = "version1";
+      String tag =  FIRST_VERSION_TAG;
 
       if (cluster.getConfigsByType(type) != null) {
         tag = "version" + System.currentTimeMillis();
