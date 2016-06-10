@@ -242,6 +242,8 @@ class Controller(threading.Thread):
     hb_interval = self.config.get('heartbeat', 'state_interval')
 
     while not self.DEBUG_STOP_HEARTBEATING:
+      heartbeat_interval = self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
+
       try:
         if not retry:
           data = json.dumps(
@@ -264,11 +266,18 @@ class Controller(threading.Thread):
 
         logger.info('Heartbeat response received (id = %s)', serverId)
 
+        cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys else -1
+
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False
 
         if 'hasPendingTasks' in response.keys():
-          self.recovery_manager.set_paused(response['hasPendingTasks'])
+          has_pending_tasks = bool(response['hasPendingTasks'])
+          self.recovery_manager.set_paused(has_pending_tasks)
+
+          heartbeat_interval = self.netutil.get_agent_heartbeat_idle_interval_sec(cluster_size) \
+            if has_pending_tasks and cluster_size > 0 \
+            else self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
 
 
         if 'registrationCommand' in response.keys():
@@ -362,8 +371,9 @@ class Controller(threading.Thread):
         time.sleep(delay)
 
       # Sleep for some time
-      timeout = self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC \
-                - self.netutil.MINIMUM_INTERVAL_BETWEEN_HEARTBEATS
+      logger.info('Heartbeat at %s seconds intervals', heartbeat_interval)
+      timeout = heartbeat_interval - self.netutil.MINIMUM_INTERVAL_BETWEEN_HEARTBEATS
+
       if 0 == self.heartbeat_stop_callback.wait(timeout, self.netutil.MINIMUM_INTERVAL_BETWEEN_HEARTBEATS):
         # Stop loop when stop event received
         logger.info("Stop event received")
@@ -408,7 +418,7 @@ class Controller(threading.Thread):
         for callback in self.registration_listeners:
           callback()
 
-        time.sleep(self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC)
+        time.sleep(self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST)
         self.heartbeatWithServer()
       else:
         logger.info("Registration response from %s didn't contain 'response' as a key".format(self.serverHostname))

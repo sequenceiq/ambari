@@ -624,4 +624,10 @@ public interface Cluster {
    * @return true if the cluster was deployed with a Blueprint otherwise false.
    */
   boolean isBluePrintDeployed();
+
+  /**
+   * Returns the number of hosts that form the cluster.
+   * @return number of hosts that form the cluster
+   */
+  int  getClusterSize();
 }
