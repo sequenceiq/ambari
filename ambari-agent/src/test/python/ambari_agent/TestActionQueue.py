@@ -409,7 +409,7 @@ class TestActionQueue(TestCase):
     config.set('agent', 'tolerate_download_failures', "true")
     dummy_controller = MagicMock()
     dummy_controller.recovery_manager = RecoveryManager(tempfile.mktemp())
-    dummy_controller.recovery_manager.update_config(5, 5, 1, 11, True, False, "", "")
+    dummy_controller.recovery_manager.update_config(5, 5, 1, 11, True, False, False, "", "")
 
     actionQueue = ActionQueue(config, dummy_controller)
     unfreeze_flag = threading.Event()
@@ -982,6 +982,7 @@ class TestActionQueue(TestCase):
   ):
     CustomServiceOrchestrator_mock.return_value = None
     dummy_controller = MagicMock()
+    dummy_controller.recovery_manager = RecoveryManager(tempfile.mktemp())
     actionQueue = ActionQueue(AmbariConfig(), dummy_controller)
     python_execution_result_dict = {
       'exitcode': 1,

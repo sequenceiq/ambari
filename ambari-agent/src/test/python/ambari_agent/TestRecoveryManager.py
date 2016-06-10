@@ -173,32 +173,32 @@ class _TestRecoveryManager(TestCase):
     rm = RecoveryManager(tempfile.mktemp(), True, False)
     self.assertTrue(rm.enabled())
 
-    rm.update_config(0, 60, 5, 12, True, False, "", "")
+    rm.update_config(0, 60, 5, 12, True, False, False, "", "")
     self.assertFalse(rm.enabled())
 
-    rm.update_config(6, 60, 5, 12, True, False, "", "")
+    rm.update_config(6, 60, 5, 12, True, False, False, "", "")
     self.assertTrue(rm.enabled())
 
-    rm.update_config(6, 0, 5, 12, True, False, "", "")
+    rm.update_config(6, 0, 5, 12, True, False, False, "", "")
     self.assertFalse(rm.enabled())
 
-    rm.update_config(6, 60, 0, 12, True, False, "", "")
+    rm.update_config(6, 60, 0, 12, True, False, False, "", "")
     self.assertFalse(rm.enabled())
 
-    rm.update_config(6, 60, 1, 12, True, False, None, None)
+    rm.update_config(6, 60, 1, 12, True, False, False, None, None)
     self.assertTrue(rm.enabled())
 
-    rm.update_config(6, 60, 61, 12, True, False, "", None)
+    rm.update_config(6, 60, 61, 12, True, False, False, "", None)
     self.assertFalse(rm.enabled())
 
-    rm.update_config(6, 60, 5, 0, True, False, None, "")
+    rm.update_config(6, 60, 5, 0, True, False, False, None, "")
     self.assertFalse(rm.enabled())
 
-    rm.update_config(6, 60, 5, 4, True, False, "", "")
+    rm.update_config(6, 60, 5, 4, True, False, False, "", "")
     self.assertFalse(rm.enabled())
 
     # maximum 2 in 2 minutes and at least 1 minute wait
-    rm.update_config(2, 5, 1, 4, True, False, "", "")
+    rm.update_config(2, 5, 1, 4, True, False, False, "", "")
     self.assertTrue(rm.enabled())
 
     # T = 1000-2
@@ -224,7 +224,7 @@ class _TestRecoveryManager(TestCase):
     self.assertFalse(rm.may_execute("NODEMANAGER"))  # too soon
 
     # maximum 2 in 2 minutes and no min wait
-    rm.update_config(2, 5, 1, 5, True, True, "", "")
+    rm.update_config(2, 5, 1, 5, True, True, False, "", "")
 
     # T = 1500-3
     self.assertTrue(rm.execute("NODEMANAGER2"))
@@ -244,7 +244,7 @@ class _TestRecoveryManager(TestCase):
 
   def test_recovery_required(self):
     rm = RecoveryManager(tempfile.mktemp(), True, False)
-
+    rm.update_config(12, 5, 1, 15, True, False, False, "NODEMANAGER", None)
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "INSTALLED")
     self.assertFalse(rm.requires_recovery("NODEMANAGER"))
@@ -292,13 +292,13 @@ class _TestRecoveryManager(TestCase):
   def test_recovery_required2(self):
 
     rm = RecoveryManager(tempfile.mktemp(), True, True)
-    rm.update_config(15, 5, 1, 16, True, False, "", "")
+    rm.update_config(15, 5, 1, 16, True, False, False, "", "")
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "STARTED")
     self.assertTrue(rm.requires_recovery("NODEMANAGER"))
 
     rm = RecoveryManager(tempfile.mktemp(), True, True)
-    rm.update_config(15, 5, 1, 16, True, False, "NODEMANAGER", "")
+    rm.update_config(15, 5, 1, 16, True, False, False, "NODEMANAGER", "")
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "STARTED")
     self.assertTrue(rm.requires_recovery("NODEMANAGER"))
@@ -308,7 +308,7 @@ class _TestRecoveryManager(TestCase):
     self.assertFalse(rm.requires_recovery("DATANODE"))
 
     rm = RecoveryManager(tempfile.mktemp(), True, True)
-    rm.update_config(15, 5, 1, 16, True, False, "", "NODEMANAGER")
+    rm.update_config(15, 5, 1, 16, True, False, False, "", "NODEMANAGER")
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "STARTED")
     self.assertFalse(rm.requires_recovery("NODEMANAGER"))
@@ -317,8 +317,8 @@ class _TestRecoveryManager(TestCase):
     rm.update_desired_status("DATANODE", "STARTED")
     self.assertTrue(rm.requires_recovery("DATANODE"))
 
-    rm.update_config(15, 5, 1, 16, True, False, "", "NODEMANAGER")
-    rm.update_config(15, 5, 1, 16, True, False, "NODEMANAGER", "")
+    rm.update_config(15, 5, 1, 16, True, False, False, "", "NODEMANAGER")
+    rm.update_config(15, 5, 1, 16, True, False, False, "NODEMANAGER", "")
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "STARTED")
     self.assertTrue(rm.requires_recovery("NODEMANAGER"))
@@ -327,7 +327,7 @@ class _TestRecoveryManager(TestCase):
     rm.update_desired_status("DATANODE", "STARTED")
     self.assertFalse(rm.requires_recovery("DATANODE"))
 
-    rm.update_config(15, 5, 1, 16, True, False, "NODEMANAGER", "NODEMANAGER")
+    rm.update_config(15, 5, 1, 16, True, False, False, "NODEMANAGER", "NODEMANAGER")
     rm.update_current_status("NODEMANAGER", "INSTALLED")
     rm.update_desired_status("NODEMANAGER", "STARTED")
     self.assertTrue(rm.requires_recovery("NODEMANAGER"))
@@ -390,9 +390,10 @@ class _TestRecoveryManager(TestCase):
        4000, 4001, 4002, 4003,
        4100, 4101, 4102, 4103,
        4200, 4201, 4202,
-       4300, 4301, 4302]
+       4300, 4301, 4302, 4399,
+       4400, 4401, 4402,]
     rm = RecoveryManager(tempfile.mktemp(), True)
-    rm.update_config(15, 5, 1, 16, True, False, "", "")
+    rm.update_config(15, 5, 1, 16, True, False, False, "", "")
 
     command1 = copy.deepcopy(self.command)
 
@@ -423,14 +424,14 @@ class _TestRecoveryManager(TestCase):
     self.assertEqual(1, len(commands))
     self.assertEqual("INSTALL", commands[0]["roleCommand"])
 
-    rm.update_config(2, 5, 1, 5, True, True, "", "")
+    rm.update_config(2, 5, 1, 5, True, True, False, "", "")
     rm.update_current_status("NODEMANAGER", "INIT")
     rm.update_desired_status("NODEMANAGER", "INSTALLED")
 
     commands = rm.get_recovery_commands()
     self.assertEqual(0, len(commands))
 
-    rm.update_config(12, 5, 1, 15, True, False, "", "")
+    rm.update_config(12, 5, 1, 15, True, False, False, "", "")
     rm.update_current_status("NODEMANAGER", "INIT")
     rm.update_desired_status("NODEMANAGER", "INSTALLED")
 
@@ -465,31 +466,38 @@ class _TestRecoveryManager(TestCase):
     commands = rm.get_recovery_commands()
     self.assertEqual(1, len(commands))
     self.assertEqual("STOP", commands[0]["roleCommand"])
+
+    rm.update_config(12, 5, 1, 15, True, False, True, "NODEMANAGER", None)
+    rm.update_current_status("NODEMANAGER", "INSTALL_FAILED")
+    rm.update_desired_status("NODEMANAGER", "INSTALLED")
+    commands = rm.get_recovery_commands()
+    self.assertEqual(1, len(commands))
+    self.assertEqual("INSTALL", commands[0]["roleCommand"])
     pass
 
   @patch.object(RecoveryManager, "update_config")
   def test_update_rm_config(self, mock_uc):
     rm = RecoveryManager(tempfile.mktemp())
     rm.update_configuration_from_registration(None)
-    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, True, "", "")])
+    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, False, False, "", "")])
 
     mock_uc.reset_mock()
     rm.update_configuration_from_registration({})
-    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, True, "", "")])
+    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, False, False, "", "")])
 
     mock_uc.reset_mock()
     rm.update_configuration_from_registration(
       {"recoveryConfig": {
       "type" : "DEFAULT"}}
     )
-    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, True, "", "")])
+    mock_uc.assert_has_calls([call(6, 60, 5, 12, False, False, False, "", "")])
 
     mock_uc.reset_mock()
     rm.update_configuration_from_registration(
       {"recoveryConfig": {
         "type" : "FULL"}}
     )
-    mock_uc.assert_has_calls([call(6, 60, 5, 12, True, False, "", "")])
+    mock_uc.assert_has_calls([call(6, 60, 5, 12, True, False, False, "", "")])
 
     mock_uc.reset_mock()
     rm.update_configuration_from_registration(
@@ -497,7 +505,7 @@ class _TestRecoveryManager(TestCase):
         "type" : "AUTO_START",
         "max_count" : "med"}}
     )
-    mock_uc.assert_has_calls([call(6, 60, 5, 12, True, True, "", "")])
+    mock_uc.assert_has_calls([call(6, 60, 5, 12, True, True, False, "", "")])
 
     mock_uc.reset_mock()
     rm.update_configuration_from_registration(
@@ -510,7 +518,7 @@ class _TestRecoveryManager(TestCase):
         "enabledComponents" : " A,B",
         "disabledComponents" : "C"}}
     )
-    mock_uc.assert_has_calls([call(5, 20, 2, 5, True, True, " A,B", "C")])
+    mock_uc.assert_has_calls([call(5, 20, 2, 5, True, True, False, " A,B", "C")])
   pass
 
   @patch.object(RecoveryManager, "_now_")
@@ -522,7 +530,7 @@ class _TestRecoveryManager(TestCase):
     rec_st = rm.get_recovery_status()
     self.assertEquals(rec_st, {"summary": "DISABLED"})
 
-    rm.update_config(2, 5, 1, 4, True, True, "", "")
+    rm.update_config(2, 5, 1, 4, True, True, False, "", "")
     rec_st = rm.get_recovery_status()
     self.assertEquals(rec_st, {"summary": "RECOVERABLE", "componentReports": []})
 
@@ -566,7 +574,7 @@ class _TestRecoveryManager(TestCase):
       [1000, 1001, 1002, 1003, 1104, 1105, 1106, 1807, 1808, 1809, 1810, 1811, 1812]
 
     rm = RecoveryManager(tempfile.mktemp(), True)
-    rm.update_config(5, 5, 1, 11, True, False, "", "")
+    rm.update_config(5, 5, 1, 11, True, False, False, "", "")
 
     command1 = copy.deepcopy(self.command)
 
@@ -610,20 +618,20 @@ class _TestRecoveryManager(TestCase):
     self.assertTrue(rm.configured_for_recovery("A"))
     self.assertTrue(rm.configured_for_recovery("B"))
 
-    rm.update_config(5, 5, 1, 11, True, False, "", "")
+    rm.update_config(5, 5, 1, 11, True, False, False, "", "")
     self.assertTrue(rm.configured_for_recovery("A"))
     self.assertTrue(rm.configured_for_recovery("B"))
 
-    rm.update_config(5, 5, 1, 11, True, False, "A", "")
+    rm.update_config(5, 5, 1, 11, True, False, False, "A", "")
     self.assertTrue(rm.configured_for_recovery("A"))
     self.assertFalse(rm.configured_for_recovery("B"))
 
-    rm.update_config(5, 5, 1, 11, True, False, "", "B,C")
+    rm.update_config(5, 5, 1, 11, True, False, False, "", "B,C")
     self.assertTrue(rm.configured_for_recovery("A"))
     self.assertFalse(rm.configured_for_recovery("B"))
     self.assertFalse(rm.configured_for_recovery("C"))
 
-    rm.update_config(5, 5, 1, 11, True, False, "A, D, F ", "B,C")
+    rm.update_config(5, 5, 1, 11, True, False, False, "A, D, F ", "B,C")
     self.assertTrue(rm.configured_for_recovery("A"))
     self.assertFalse(rm.configured_for_recovery("B"))
     self.assertFalse(rm.configured_for_recovery("C"))
@@ -637,7 +645,7 @@ class _TestRecoveryManager(TestCase):
       [1000, 1071, 1372]
     rm = RecoveryManager(tempfile.mktemp(), True)
 
-    rm.update_config(2, 5, 1, 4, True, True, "", "")
+    rm.update_config(2, 5, 1, 4, True, True, False, "", "")
 
     rm.execute("COMPONENT")
     actions = rm.get_actions_copy()["COMPONENT"]
@@ -655,7 +663,7 @@ class _TestRecoveryManager(TestCase):
   def test_is_action_info_stale(self, time_mock):
 
     rm = RecoveryManager(tempfile.mktemp(), True)
-    rm.update_config(5, 60, 5, 16, True, False, "", "")
+    rm.update_config(5, 60, 5, 16, True, False, False, "", "")
 
     # rm.actions = {}
 

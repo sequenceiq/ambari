@@ -54,6 +54,7 @@ class RecoveryManager:
   STARTED = "STARTED"
   INSTALLED = "INSTALLED"
   INIT = "INIT"  # TODO: What is the state when machine is reset
+  INSTALL_FAILED = "INSTALL_FAILED"
   COMPONENT_UPDATE_KEY_FORMAT = "{0}_UPDATE_TIME"
   COMMAND_REFRESH_DELAY_SEC = 600 #10 minutes
 
@@ -75,9 +76,10 @@ class RecoveryManager:
     "stale_config": False
   }
 
-  def __init__(self, cache_dir, recovery_enabled=False, auto_start_only=False):
+  def __init__(self, cache_dir, recovery_enabled=False, auto_start_only=False, auto_install_start=False):
     self.recovery_enabled = recovery_enabled
     self.auto_start_only = auto_start_only
+    self.auto_install_start = auto_install_start
     self.max_count = 6
     self.window_in_min = 60
     self.retry_gap = 5
@@ -107,7 +109,7 @@ class RecoveryManager:
 
     self.actions = {}
 
-    self.update_config(6, 60, 5, 12, recovery_enabled, auto_start_only, "", "")
+    self.update_config(6, 60, 5, 12, recovery_enabled, auto_start_only, auto_install_start, "", "")
 
     pass
 
@@ -245,7 +247,7 @@ class RecoveryManager:
       return False
 
     status = self.statuses[component]
-    if self.auto_start_only:
+    if self.auto_start_only or self.auto_install_start:
       if status["current"] == status["desired"]:
         return False
       if status["desired"] not in self.allowed_desired_states:
@@ -313,6 +315,8 @@ class RecoveryManager:
     This method computes the recovery commands for the following transitions
     INSTALLED --> STARTED
     INIT --> INSTALLED
+    INSTALL_FAILED --> INSTALLED
+    INSTALL_FAILED --> STARTED
     """
     commands = []
     for component in self.statuses.keys():
@@ -323,6 +327,15 @@ class RecoveryManager:
           if status["desired"] == self.STARTED:
             if status["current"] == self.INSTALLED:
               command = self.get_start_command(component)
+        elif self.auto_install_start:
+          if status["desired"] == self.STARTED:
+            if status["current"] == self.INSTALLED:
+              command = self.get_start_command(component)
+            elif status["current"] == self.INSTALL_FAILED:
+              command = self.get_install_command(component)
+          elif status["desired"] == self.INSTALLED:
+            if status["current"] == self.INSTALL_FAILED:
+              command = self.get_install_command(component)
         else:
           # START, INSTALL, RESTART
           if status["desired"] != status["current"]:
@@ -331,8 +344,12 @@ class RecoveryManager:
                 command = self.get_start_command(component)
               elif status["current"] == self.INIT:
                 command = self.get_install_command(component)
+              elif status["current"] == self.INSTALL_FAILED:
+                command = self.get_install_command(component)
             elif status["desired"] == self.INSTALLED:
               if status["current"] == self.INIT:
+                command = self.get_install_command(component)
+              elif status["current"] == self.INSTALL_FAILED:
                 command = self.get_install_command(component)
               elif status["current"] == self.STARTED:
                 command = self.get_stop_command(component)
@@ -543,7 +560,7 @@ class RecoveryManager:
     """
     TODO: Server sends the recovery configuration - call update_config after parsing
     "recoveryConfig": {
-      "type" : "DEFAULT|AUTO_START|FULL",
+      "type" : "DEFAULT|AUTO_START|AUTO_INSTALL_START|FULL",
       "maxCount" : 10,
       "windowInMinutes" : 60,
       "retryGap" : 0,
@@ -552,7 +569,8 @@ class RecoveryManager:
     """
 
     recovery_enabled = False
-    auto_start_only = True
+    auto_start_only = False
+    auto_install_start = False
     max_count = 6
     window_in_min = 60
     retry_gap = 5
@@ -565,10 +583,13 @@ class RecoveryManager:
       logger.info("RecoverConfig = " + pprint.pformat(reg_resp["recoveryConfig"]))
       config = reg_resp["recoveryConfig"]
       if "type" in config:
-        if config["type"] in ["AUTO_START", "FULL"]:
+        if config["type"] in ["AUTO_INSTALL_START", "AUTO_START", "FULL"]:
           recovery_enabled = True
-          if config["type"] == "FULL":
-            auto_start_only = False
+          if config["type"] == "AUTO_START":
+            auto_start_only = True
+          elif config["type"] == "AUTO_INSTALL_START":
+	        auto_install_start = True
+
       if "maxCount" in config:
         max_count = self._read_int_(config["maxCount"], max_count)
       if "windowInMinutes" in config:
@@ -583,12 +604,25 @@ class RecoveryManager:
       if 'disabledComponents' in config:
         disabled_components = config['disabledComponents']
     self.update_config(max_count, window_in_min, retry_gap, max_lifetime_count, recovery_enabled, auto_start_only,
-                       enabled_components, disabled_components)
+                       auto_install_start, enabled_components, disabled_components)
     pass
 
 
+  """
+  Update recovery configuration with the specified values.
+
+  max_count - Configured maximum count of recovery attempt allowed per host component in a window.
+  window_in_min - Configured window size in minutes.
+  retry_gap - Configured retry gap between tries per host component
+  max_lifetime_count - Configured maximum lifetime count of recovery attempt allowed per host component.
+  recovery_enabled - True or False. Indicates whether recovery is enabled or not.
+  auto_start_only - True if AUTO_START recovery type was specified. False otherwise.
+  auto_install_start - True if AUTO_INSTALL_START recovery type was specified. False otherwise.
+  enabled_components - CSV of componenents enabled for auto start.
+  disabled_components - CSV of componenents disabled for auto start.
+  """
   def update_config(self, max_count, window_in_min, retry_gap, max_lifetime_count, recovery_enabled,
-                    auto_start_only, enabled_components, disabled_components):
+                    auto_start_only, auto_install_start, enabled_components, disabled_components):
     """
     Update recovery configuration, recovery is disabled if configuration values
     are not correct
@@ -618,16 +652,20 @@ class RecoveryManager:
     self.window_in_sec = window_in_min * 60
     self.retry_gap_in_sec = retry_gap * 60
     self.auto_start_only = auto_start_only
+    self.auto_install_start = auto_install_start
     self.max_lifetime_count = max_lifetime_count
     self.disabled_components = []
     self.enabled_components = []
 
     self.allowed_desired_states = [self.STARTED, self.INSTALLED]
-    self.allowed_current_states = [self.INIT, self.INSTALLED, self.STARTED]
+    self.allowed_current_states = [self.INIT, self.INSTALL_FAILED, self.INSTALLED, self.STARTED]
 
     if self.auto_start_only:
       self.allowed_desired_states = [self.STARTED]
       self.allowed_current_states = [self.INSTALLED]
+    elif self.auto_install_start:
+      self.allowed_desired_states = [self.INSTALLED, self.STARTED]
+      self.allowed_current_states = [self.INSTALL_FAILED, self.INSTALLED]
 
     if enabled_components is not None and len(enabled_components) > 0:
       components = enabled_components.split(",")

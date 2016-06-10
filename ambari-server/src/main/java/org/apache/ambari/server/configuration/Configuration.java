@@ -2081,7 +2081,7 @@ public class Configuration {
   }
 
   /**
-   * Get the node recovery type DEFAULT|AUTO_START|FULL
+   * Get the node recovery type DEFAULT|AUTO_INSTALL_START|AUTO_START|FULL
    * @return
    */
   public String getNodeRecoveryType() {
