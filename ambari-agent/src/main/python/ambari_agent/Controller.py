@@ -266,7 +266,7 @@ class Controller(threading.Thread):
 
         logger.info('Heartbeat response received (id = %s)', serverId)
 
-        cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys else -1
+        cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys() else -1
 
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False
