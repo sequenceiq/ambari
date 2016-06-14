@@ -55,6 +55,7 @@ import org.apache.ambari.server.state.DesiredConfig;
 import org.apache.ambari.server.state.Host;
 import org.apache.ambari.server.state.SecurityType;
 import org.apache.ambari.server.state.StackId;
+import org.apache.ambari.server.state.State;
 import org.apache.ambari.server.state.configgroup.ConfigGroup;
 import org.apache.ambari.server.utils.RetryHelper;
 import org.slf4j.Logger;
@@ -84,6 +85,9 @@ public class AmbariContext {
   @Inject
   private PersistedState persistedState;
 
+  @Inject
+  private org.apache.ambari.server.configuration.Configuration configs;
+
   private static AmbariManagementController controller;
   private static ClusterController clusterController;
   //todo: task id's.  Use existing mechanism for getting next task id sequence
@@ -106,6 +110,11 @@ public class AmbariContext {
     }
     return cluster.getSecurityType() == SecurityType.KERBEROS;
   }
+
+  public boolean areHostsSysPrepped() {
+    return Boolean.parseBoolean(configs.areHostsSysPrepped());
+  }
+
 
   //todo: change return type to a topology abstraction
   public HostRoleCommand createAmbariTask(long requestId, long stageId, String component, String host, TaskType type) {
