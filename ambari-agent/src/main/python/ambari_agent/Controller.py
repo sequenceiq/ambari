@@ -275,10 +275,10 @@ class Controller(threading.Thread):
           has_pending_tasks = bool(response['hasPendingTasks'])
           self.recovery_manager.set_paused(has_pending_tasks)
 
-          heartbeat_interval = self.netutil.get_agent_heartbeat_idle_interval_sec(cluster_size) \
+          # TODO: this needs to be revised if hosts can be shared across multiple clusters
+          heartbeat_interval = self.netutil.get_agent_running_heartbeat_idle_interval_sec(cluster_size) \
             if has_pending_tasks and cluster_size > 0 \
             else self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
-
 
         if 'registrationCommand' in response.keys():
           # check if the registration command is None. If none skip
@@ -371,7 +371,6 @@ class Controller(threading.Thread):
         time.sleep(delay)
 
       # Sleep for some time
-      logger.info('Heartbeat at %s seconds intervals', heartbeat_interval)
       timeout = heartbeat_interval - self.netutil.MINIMUM_INTERVAL_BETWEEN_HEARTBEATS
 
       if 0 == self.heartbeat_stop_callback.wait(timeout, self.netutil.MINIMUM_INTERVAL_BETWEEN_HEARTBEATS):
