@@ -123,7 +123,7 @@ class NetUtil:
 
     return retries, connected, self.DEBUG_STOP_RETRIES_FLAG
 
-  def get_agent_heartbeat_idle_interval_sec(self, cluster_size):
+  def get_agent_running_heartbeat_idle_interval_sec(self, cluster_size):
     """
     Returns the interval in seconds to be used between agent heartbeats when
     there are pending stages which requires higher heartbeat rate to reduce the latency
@@ -139,13 +139,14 @@ class NetUtil:
     :param cluster_size: the number of nodes the cluster consists of
     :return: the heartbeat interval in seconds
     """
+
+    if cluster_size <= self.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST:
+      return 1
+
     hearbeat_idle_interval = cluster_size // self.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
 
     if hearbeat_idle_interval > self.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST:
       return self.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
-
-    if hearbeat_idle_interval < 1:
-      return 1
 
 
     return hearbeat_idle_interval
