@@ -311,7 +311,7 @@ public class ClusterImplTest {
   public void testGetClusterSize() throws Exception {
     // Given
     String clusterName = "TEST_CLUSTER_SIZE";
-    String hostName1 = "HOSTNAME1", hostName2 = "HOSTNAME2";
+    String hostName1 = "host1", hostName2 = "host2";
     clusters.addCluster(clusterName, new StackId("HDP-2.1.1"));
 
     Cluster cluster = clusters.getCluster(clusterName);
