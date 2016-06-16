@@ -29,6 +29,7 @@ import urllib2
 import pprint
 from random import randint
 import subprocess
+import functools
 
 import hostname
 import security
@@ -109,10 +110,10 @@ class Controller(threading.Thread):
 
     self.heartbeat_iddle_interval_max = int(self.config.get('heartbeat', 'iddle_interval_max')) if self.config.get('heartbeat', 'iddle_interval_max') else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
 
-    if self.heartbeat_iddle_interval_max > self.heartbeat_iddle_interval_min:
-      raise Exception("Heartbeat minimum interval {0} can not be greater than the maximum interval {1} !".format(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max))
+    if self.heartbeat_iddle_interval_min > self.heartbeat_iddle_interval_max:
+      raise Exception("Heartbeat minimum interval={0} seconds can not be greater than the maximum interval={1} seconds !".format(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max))
 
-    self.get_heartbeat_interval = self.netutil.get_agent_heartbeat_idle_interval_sec(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max)
+    self.get_heartbeat_interval = functools.partial(self.netutil.get_agent_heartbeat_idle_interval_sec, self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max)
 
     self.recovery_manager = RecoveryManager(recovery_cache_dir)
 
@@ -289,6 +290,7 @@ class Controller(threading.Thread):
         heartbeat_interval = self.get_heartbeat_interval(cluster_size) \
           if cluster_size > 0 \
           else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
+        logger.debug("Heartbeat interval is %s seconds", heartbeat_interval)
 
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False
