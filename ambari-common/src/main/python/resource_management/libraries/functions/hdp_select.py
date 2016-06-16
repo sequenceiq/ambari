@@ -119,7 +119,18 @@ def select_all(version_to_select):
 
   command = format('{sudo} /usr/bin/hdp-select set all `ambari-python-wrap /usr/bin/hdp-select versions | grep ^{version_to_select} | tail -1`')
   only_if_command = format('ls -d /usr/hdp/{version_to_select}*')
-  Execute(command, only_if = only_if_command)
+
+  try:
+      Execute(command, only_if=only_if_command)
+  except Fail:
+      Logger.error("hdp-select command failed. The value of the [ only_if ] argument is: {0}".format(only_if_command))
+
+      Execute(('ls', '-la', '/usr/hdp'), logoutput=True)
+      Execute(('ls', '-la', '/usr/hdp/current'), logoutput=True)
+      Execute(('hdp-select', 'status'), sudo=True, logoutput=True)
+
+      # failure needs to be propagated further
+      raise
 
 
 def select(component, version):
