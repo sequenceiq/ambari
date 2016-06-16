@@ -37,6 +37,7 @@ import org.apache.ambari.server.agent.CommandReport;
 import org.apache.ambari.server.agent.ExecutionCommand;
 import org.apache.ambari.server.configuration.Configuration;
 import org.apache.ambari.server.events.HostRemovedEvent;
+import org.apache.ambari.server.events.RequestFinishedEvent;
 import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.orm.dao.ClusterDAO;
 import org.apache.ambari.server.orm.dao.ExecutionCommandDAO;
@@ -116,6 +117,9 @@ public class ActionDBAccessorImpl implements ActionDBAccessor {
 
   @Inject
   Configuration configuration;
+
+  @Inject
+  AmbariEventPublisher ambariEventPublisher;
 
   private Cache<Long, HostRoleCommand> hostRoleCommandCache;
   private long cacheLimit; //may be exceeded to store tasks from one request
@@ -395,6 +399,7 @@ public class ActionDBAccessorImpl implements ActionDBAccessor {
     if (requestEntity != null && requestEntity.getEndTime() == -1L) {
       requestEntity.setEndTime(System.currentTimeMillis());
       requestDAO.merge(requestEntity);
+      ambariEventPublisher.publish(new RequestFinishedEvent(requestEntity.getClusterId(), requestId));
     }
   }
 
