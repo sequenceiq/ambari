@@ -85,24 +85,24 @@ class TestNetUtil(unittest.TestCase):
     checkURL.return_value = False, "test"
     self.assertEqual((5,False), netutil.try_to_connect("url", 5))
 
-  def test_get_agent_running_heartbeat_idle_interval_sec(self):
+  def test_get_agent_heartbeat_idle_interval_sec(self):
     netutil = NetUtil.NetUtil()
 
-    heartbeat_interval = netutil.get_agent_running_heartbeat_idle_interval_sec(32)
+    heartbeat_interval = netutil.get_agent_heartbeat_idle_interval_sec(1, 10, 32)
 
     self.assertEqual(heartbeat_interval, 3)
 
-  def test_get_agent_running_heartbeat_idle_interval_sec_max(self):
+  def test_get_agent_heartbeat_idle_interval_sec_max(self):
     netutil = NetUtil.NetUtil()
 
-    heartbeat_interval = netutil.get_agent_running_heartbeat_idle_interval_sec(1500)
+    heartbeat_interval = netutil.get_agent_heartbeat_idle_interval_sec(1, 10, 1500)
 
-    self.assertEqual(heartbeat_interval, netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST)
+    self.assertEqual(heartbeat_interval, netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC)
 
-  def test_get_agent_running_heartbeat_idle_interval_sec_min(self):
+  def test_get_agent_heartbeat_idle_interval_sec_min(self):
     netutil = NetUtil.NetUtil()
 
-    heartbeat_interval = netutil.get_agent_running_heartbeat_idle_interval_sec(5)
+    heartbeat_interval = netutil.get_agent_heartbeat_idle_interval_sec(1, 10, 5)
 
     self.assertEqual(heartbeat_interval, 1)
 

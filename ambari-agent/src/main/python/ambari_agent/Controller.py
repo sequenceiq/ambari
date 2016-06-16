@@ -97,6 +97,17 @@ class Controller(threading.Thread):
     cluster_config_cache_dir = os.path.join(cache_dir, FileCache.CLUSTER_CONFIGURATION_CACHE_DIRECTORY)
     recovery_cache_dir = os.path.join(cache_dir, FileCache.RECOVERY_CACHE_DIRECTORY)
 
+    self.heartbeat_iddle_interval_min = int(self.config.get('heartbeat', 'iddle_interval_min')) if self.config.get('heartbeat', 'iddle_interval_min') else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MIN_SEC
+    if self.heartbeat_iddle_interval_min < 1:
+      self.heartbeat_iddle_interval_min = 1
+
+    self.heartbeat_iddle_interval_max = int(self.config.get('heartbeat', 'iddle_interval_max')) if self.config.get('heartbeat', 'iddle_interval_max') else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
+
+    if self.heartbeat_iddle_interval_max > self.heartbeat_iddle_interval_min:
+      raise Exception("Heartbeat minimum interval {0} can not be greater than the maximum interval {1} !".format(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max))
+
+    self.get_heartbeat_interval = self.netutil.get_agent_heartbeat_idle_interval_sec(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max)
+
     self.recovery_manager = RecoveryManager(recovery_cache_dir)
 
     self.cluster_configuration = ClusterConfiguration(cluster_config_cache_dir)
@@ -242,7 +253,7 @@ class Controller(threading.Thread):
     hb_interval = self.config.get('heartbeat', 'state_interval')
 
     while not self.DEBUG_STOP_HEARTBEATING:
-      heartbeat_interval = self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
+      heartbeat_interval = self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
 
       try:
         if not retry:
@@ -268,17 +279,17 @@ class Controller(threading.Thread):
 
         cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys() else -1
 
+        # TODO: this needs to be revised if hosts can be shared across multiple clusters
+        heartbeat_interval = self.get_heartbeat_interval(cluster_size) \
+          if cluster_size > 0 \
+          else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
+
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False
 
         if 'hasPendingTasks' in response.keys():
           has_pending_tasks = bool(response['hasPendingTasks'])
           self.recovery_manager.set_paused(has_pending_tasks)
-
-          # TODO: this needs to be revised if hosts can be shared across multiple clusters
-          heartbeat_interval = self.netutil.get_agent_running_heartbeat_idle_interval_sec(cluster_size) \
-            if has_pending_tasks and cluster_size > 0 \
-            else self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST
 
         if 'registrationCommand' in response.keys():
           # check if the registration command is None. If none skip
@@ -417,7 +428,7 @@ class Controller(threading.Thread):
         for callback in self.registration_listeners:
           callback()
 
-        time.sleep(self.netutil.HEARTBEAT_IDDLE_INTERVAL_SEC_AT_REST)
+        time.sleep(self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC)
         self.heartbeatWithServer()
       else:
         logger.info("Registration response from %s didn't contain 'response' as a key".format(self.serverHostname))
