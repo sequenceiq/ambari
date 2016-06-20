@@ -491,7 +491,6 @@ public class HeartBeatHandler {
       List<ServiceComponentHost> scHosts = cl.getServiceComponentHosts(hostname);
       if (scHosts != null && scHosts.size() > 0) {
         response.setHasMappedComponents(true);
-        cl.getHosts();
         break;
       }
     }
