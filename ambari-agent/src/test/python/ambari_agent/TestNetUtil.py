@@ -97,7 +97,7 @@ class TestNetUtil(unittest.TestCase):
 
     heartbeat_interval = netutil.get_agent_heartbeat_idle_interval_sec(1, 10, 1500)
 
-    self.assertEqual(heartbeat_interval, netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC)
+    self.assertEqual(heartbeat_interval, netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC)
 
   def test_get_agent_heartbeat_idle_interval_sec_min(self):
     netutil = NetUtil.NetUtil()

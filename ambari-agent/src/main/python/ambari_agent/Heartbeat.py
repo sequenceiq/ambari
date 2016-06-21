@@ -40,7 +40,7 @@ class Heartbeat:
     self.reports = []
     self.collector = alert_collector
 
-  def build(self, id='-1', state_interval=-1, componentsMapped=False):
+  def build(self, id='-1', add_state=False, componentsMapped=False):
     global clusterId, clusterDefinitionRevision, firstContact
     timestamp = int(time.time()*1000)
     queueResult = self.actionQueue.result()
@@ -81,7 +81,7 @@ class Heartbeat:
       logger.debug("Heartbeat: %s", pformat(heartbeat))
 
     hostInfo = HostInfo(self.config)
-    if (int(id) >= 0) and state_interval > 0 and (int(id) % state_interval) == 0:
+    if add_state:
       nodeInfo = { }
       # for now, just do the same work as registration
       # this must be the last step before returning heartbeat

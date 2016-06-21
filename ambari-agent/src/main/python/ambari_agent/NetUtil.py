@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 class NetUtil:
 
   CONNECT_SERVER_RETRY_INTERVAL_SEC = 10
-  HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MIN_SEC = 1
-  HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC = 10
+  HEARTBEAT_IDLE_INTERVAL_DEFAULT_MIN_SEC = 1
+  HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC = 10
   MINIMUM_INTERVAL_BETWEEN_HEARTBEATS = 0.1
 
   # Url within server to request during status check. This url
@@ -120,7 +120,7 @@ class NetUtil:
         self.DEBUG_STOP_RETRIES_FLAG = True
     return retries, connected
 
-  def get_agent_heartbeat_idle_interval_sec(self, heartbeat_iddle_interval_min, heartbeat_iddle_interval_max, cluster_size):
+  def get_agent_heartbeat_idle_interval_sec(self, heartbeat_idle_interval_min, heartbeat_idle_interval_max, cluster_size):
     """
     Returns the interval in seconds to be used between agent heartbeats when
     there are pending stages which requires higher heartbeat rate to reduce the latency
@@ -131,19 +131,18 @@ class NetUtil:
 
     Using a higher hearbeat rate in case of large clusters will cause agents to flood
     the server with heartbeat messages thus the calculated heartbeat interval is restricted to
-    [heartbeat_iddle_interval_min, heartbeat_iddle_interval_max] range.
+    [heartbeat_idle_interval_min, heartbeat_idle_interval_max] range.
 
     :param cluster_size: the number of nodes the cluster consists of
     :return: the heartbeat interval in seconds
     """
 
-    hearbeat_idle_interval = cluster_size // heartbeat_iddle_interval_max
+    heartbeat_idle_interval = cluster_size // heartbeat_idle_interval_max
 
-    if hearbeat_idle_interval < heartbeat_iddle_interval_min:
-      return heartbeat_iddle_interval_min
+    if heartbeat_idle_interval < heartbeat_idle_interval_min:
+      return heartbeat_idle_interval_min
 
-    if hearbeat_idle_interval > heartbeat_iddle_interval_max:
-      return heartbeat_iddle_interval_max
+    if heartbeat_idle_interval > heartbeat_idle_interval_max:
+      return heartbeat_idle_interval_max
 
-
-    return hearbeat_idle_interval
+    return heartbeat_idle_interval

@@ -98,16 +98,16 @@ class Controller(threading.Thread):
     cluster_config_cache_dir = os.path.join(cache_dir, FileCache.CLUSTER_CONFIGURATION_CACHE_DIRECTORY)
     recovery_cache_dir = os.path.join(cache_dir, FileCache.RECOVERY_CACHE_DIRECTORY)
 
-    self.heartbeat_iddle_interval_min = int(self.config.get('heartbeat', 'iddle_interval_min')) if self.config.get('heartbeat', 'iddle_interval_min') else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MIN_SEC
-    if self.heartbeat_iddle_interval_min < 1:
-      self.heartbeat_iddle_interval_min = 1
+    self.heartbeat_idle_interval_min = int(self.config.get('heartbeat', 'idle_interval_min')) if self.config.get('heartbeat', 'idle_interval_min') else self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MIN_SEC
+    if self.heartbeat_idle_interval_min < 1:
+      self.heartbeat_idle_interval_min = 1
 
-    self.heartbeat_iddle_interval_max = int(self.config.get('heartbeat', 'iddle_interval_max')) if self.config.get('heartbeat', 'iddle_interval_max') else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
+    self.heartbeat_idle_interval_max = int(self.config.get('heartbeat', 'idle_interval_max')) if self.config.get('heartbeat', 'idle_interval_max') else self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
 
-    if self.heartbeat_iddle_interval_min > self.heartbeat_iddle_interval_max:
-      raise Exception("Heartbeat minimum interval={0} seconds can not be greater than the maximum interval={1} seconds !".format(self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max))
+    if self.heartbeat_idle_interval_min > self.heartbeat_idle_interval_max:
+      raise Exception("Heartbeat minimum interval={0} seconds can not be greater than the maximum interval={1} seconds !".format(self.heartbeat_idle_interval_min, self.heartbeat_idle_interval_max))
 
-    self.get_heartbeat_interval = functools.partial(self.netutil.get_agent_heartbeat_idle_interval_sec, self.heartbeat_iddle_interval_min, self.heartbeat_iddle_interval_max)
+    self.get_heartbeat_interval = functools.partial(self.netutil.get_agent_heartbeat_idle_interval_sec, self.heartbeat_idle_interval_min, self.heartbeat_idle_interval_max)
 
     self.recovery_manager = RecoveryManager(recovery_cache_dir)
 
@@ -251,15 +251,22 @@ class Controller(threading.Thread):
     self.DEBUG_SUCCESSFULL_HEARTBEATS = 0
     retry = False
     certVerifFailed = False
-    hb_interval = self.config.get('heartbeat', 'state_interval')
+    state_interval = self.config.get('heartbeat', 'state_interval_seconds', '60')
+    last_state_timestamp = 0.0 # last time when state was successfully sent to server
 
     while not self.DEBUG_STOP_HEARTBEATING:
-      heartbeat_interval = self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
+      heartbeat_interval = self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
 
       try:
+        send_state = False
         if not retry:
+          if time.time() - last_state_timestamp > int(state_interval):
+            send_state = True
+            if logger.isEnabledFor(logging.DEBUG):
+              logger.debug("Adding state to heartbeat message.")
+
           data = json.dumps(
-              self.heartbeat.build(self.responseId, int(hb_interval), self.hasMappedComponents))
+              self.heartbeat.build(self.responseId, send_state, self.hasMappedComponents))
         else:
           self.DEBUG_HEARTBEAT_RETRIES += 1
 
@@ -283,8 +290,10 @@ class Controller(threading.Thread):
         # TODO: this needs to be revised if hosts can be shared across multiple clusters
         heartbeat_interval = self.get_heartbeat_interval(cluster_size) \
           if cluster_size > 0 \
-          else self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC
-        logger.debug("Heartbeat interval is %s seconds", heartbeat_interval)
+          else self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
+
+        if logger.isEnabledFor(logging.DEBUG):
+          logger.debug("Heartbeat interval is %s seconds", heartbeat_interval)
 
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False
@@ -306,6 +315,8 @@ class Controller(threading.Thread):
           self.restartAgent()
         else:
           self.responseId = serverId
+          if send_state:
+            last_state_timestamp = time.time()
 
         # if the response contains configurations, update the in-memory and
         # disk-based configuration cache (execution and alert commands have this)
@@ -430,7 +441,7 @@ class Controller(threading.Thread):
         for callback in self.registration_listeners:
           callback()
 
-        time.sleep(self.netutil.HEARTBEAT_IDDLE_INTERVAL_DEFAULT_MAX_SEC)
+        time.sleep(self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC)
         self.heartbeatWithServer()
       else:
         logger.info("Registration response from %s didn't contain 'response' as a key".format(self.serverHostname))
