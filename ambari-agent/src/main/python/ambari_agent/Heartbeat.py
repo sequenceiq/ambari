@@ -74,7 +74,8 @@ class Heartbeat:
     if int(id) == 0:
       componentsMapped = False
 
-    logger.info("Building Heartbeat: {responseId = %s, timestamp = %s, commandsInProgress = %s, componentsMapped = %s}",
+    if logger.isEnabledFor(logging.DEBUG):
+      logger.debug("Building Heartbeat: {responseId = %s, timestamp = %s, commandsInProgress = %s, componentsMapped = %s}",
         str(id), str(timestamp), repr(commandsInProgress), repr(componentsMapped))
 
     if logger.isEnabledFor(logging.DEBUG):
@@ -82,6 +83,7 @@ class Heartbeat:
 
     hostInfo = HostInfo(self.config)
     if add_state:
+      logger.info("Adding host info/state to heartbeat message.")
       nodeInfo = { }
       # for now, just do the same work as registration
       # this must be the last step before returning heartbeat

@@ -252,18 +252,28 @@ class Controller(threading.Thread):
     retry = False
     certVerifFailed = False
     state_interval = self.config.get('heartbeat', 'state_interval_seconds', '60')
-    last_state_timestamp = 0.0 # last time when state was successfully sent to server
+
+    # last time when state was successfully sent to server
+    last_state_timestamp = 0.0
+
+    # in order to be able to check from logs that heartbeats processing
+    # still running we log a message. However to avoid generating too
+    # much log when the heartbeat runs at a higher rate (e.g. 1 second intervals)
+    # we log the message at the same interval as 'state interval'
+    heartbeat_running_msg_timestamp = 0.0
 
     while not self.DEBUG_STOP_HEARTBEATING:
       heartbeat_interval = self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
 
       try:
+        if time.time() - heartbeat_running_msg_timestamp > int(state_interval):
+          logger.info("Heartbeat with server is running...")
+          heartbeat_running_msg_timestamp = time.time()
+
         send_state = False
         if not retry:
           if time.time() - last_state_timestamp > int(state_interval):
             send_state = True
-            if logger.isEnabledFor(logging.DEBUG):
-              logger.debug("Adding state to heartbeat message.")
 
           data = json.dumps(
               self.heartbeat.build(self.responseId, send_state, self.hasMappedComponents))
@@ -283,7 +293,8 @@ class Controller(threading.Thread):
 
         serverId = int(response['responseId'])
 
-        logger.info('Heartbeat response received (id = %s)', serverId)
+        if logger.isEnabledFor(logging.DEBUG):
+          logger.debug('Heartbeat response received (id = %s)', serverId)
 
         cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys() else -1
 
