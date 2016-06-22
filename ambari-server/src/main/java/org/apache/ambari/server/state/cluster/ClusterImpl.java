@@ -3420,6 +3420,16 @@ public class ClusterImpl implements Cluster {
     return false;
   }
 
+  /**
+   * Returns the number of hosts that form the cluster.
+   *
+   * @return number of hosts that form the cluster
+   */
+  @Override
+  public int getClusterSize() {
+    return clusters.getClusterSize(clusterName);
+  }
+
   private ClusterEntity getClusterEntity() {
     return clusterDAO.findById(clusterId);
   }
