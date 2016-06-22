@@ -266,13 +266,14 @@ class Controller(threading.Thread):
       heartbeat_interval = self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
 
       try:
-        if time.time() - heartbeat_running_msg_timestamp > int(state_interval):
+        crt_time = time.time()
+        if crt_time - heartbeat_running_msg_timestamp > int(state_interval):
           logger.info("Heartbeat with server is running...")
-          heartbeat_running_msg_timestamp = time.time()
+          heartbeat_running_msg_timestamp = crt_time
 
         send_state = False
         if not retry:
-          if time.time() - last_state_timestamp > int(state_interval):
+          if crt_time - last_state_timestamp > int(state_interval):
             send_state = True
 
           data = json.dumps(
@@ -280,8 +281,8 @@ class Controller(threading.Thread):
         else:
           self.DEBUG_HEARTBEAT_RETRIES += 1
 
-        if logger.isEnabledFor(logging.DEBUG):
-          logger.debug("Sending Heartbeat (id = %s): %s", self.responseId, data)
+
+        logger.debug("Sending Heartbeat (id = %s): %s", self.responseId, data)
 
         response = self.sendRequest(self.heartbeatUrl, data)
         exitStatus = 0
@@ -293,8 +294,8 @@ class Controller(threading.Thread):
 
         serverId = int(response['responseId'])
 
-        if logger.isEnabledFor(logging.DEBUG):
-          logger.debug('Heartbeat response received (id = %s)', serverId)
+
+        logger.debug('Heartbeat response received (id = %s)', serverId)
 
         cluster_size = int(response['clusterSize']) if 'clusterSize' in response.keys() else -1
 
@@ -303,8 +304,8 @@ class Controller(threading.Thread):
           if cluster_size > 0 \
           else self.netutil.HEARTBEAT_IDLE_INTERVAL_DEFAULT_MAX_SEC
 
-        if logger.isEnabledFor(logging.DEBUG):
-          logger.debug("Heartbeat interval is %s seconds", heartbeat_interval)
+
+        logger.debug("Heartbeat interval is %s seconds", heartbeat_interval)
 
         if 'hasMappedComponents' in response.keys():
           self.hasMappedComponents = response['hasMappedComponents'] is not False

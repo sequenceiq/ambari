@@ -74,12 +74,10 @@ class Heartbeat:
     if int(id) == 0:
       componentsMapped = False
 
-    if logger.isEnabledFor(logging.DEBUG):
-      logger.debug("Building Heartbeat: {responseId = %s, timestamp = %s, commandsInProgress = %s, componentsMapped = %s}",
+    logger.debug("Building Heartbeat: {responseId = %s, timestamp = %s, commandsInProgress = %s, componentsMapped = %s}",
         str(id), str(timestamp), repr(commandsInProgress), repr(componentsMapped))
 
-    if logger.isEnabledFor(logging.DEBUG):
-      logger.debug("Heartbeat: %s", pformat(heartbeat))
+    logger.debug("Heartbeat: %s", pformat(heartbeat))
 
     hostInfo = HostInfo(self.config)
     if add_state:
@@ -92,9 +90,9 @@ class Heartbeat:
       mounts = Hardware.osdisks(self.config)
       heartbeat['mounts'] = mounts
 
-      if logger.isEnabledFor(logging.DEBUG):
-        logger.debug("agentEnv: %s", str(nodeInfo))
-        logger.debug("mounts: %s", str(mounts))
+
+      logger.debug("agentEnv: %s", str(nodeInfo))
+      logger.debug("mounts: %s", str(mounts))
 
     if self.collector is not None:
       heartbeat['alerts'] = self.collector.alerts()
