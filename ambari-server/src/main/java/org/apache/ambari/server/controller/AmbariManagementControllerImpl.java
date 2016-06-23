@@ -2443,7 +2443,7 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
 
             // Skip INSTALL task in case SysPrepped hosts and in case of server components. In case of server component
             // START task should run configuration script.
-            if (Boolean.parseBoolean(configs.areHostsSysPrepped()) &&
+            if (configs.skipInstallTasks() &&
                   "INITIAL_INSTALL".equals(requestProperties.get("phase")) &&
                     newState == State.INSTALLED && !isClientComponent(cluster, scHost)) {
               LOG.info("Skipping create of INSTALL task for {} on {} because host is sysprepped.", scHost

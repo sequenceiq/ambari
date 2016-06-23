@@ -111,8 +111,8 @@ public class AmbariContext {
     return cluster.getSecurityType() == SecurityType.KERBEROS;
   }
 
-  public boolean areHostsSysPrepped() {
-    return Boolean.parseBoolean(configs.areHostsSysPrepped());
+  public boolean shouldSkipInstallTasks() {
+    return configs.skipInstallTasks();
   }
 
 
