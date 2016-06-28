@@ -552,6 +552,14 @@ public class Configuration {
 
   public static final String ALERTS_SNMP_DISPATCH_UDP_PORT = "alerts.snmp.dispatcher.udp.port";
 
+  /**
+   * The number of tasks that can be queried from the database at once
+   * In the case of more tasks, multiple queries are issued
+   * @return
+   */
+  private static final String TASK_ID_LIST_LIMIT = "task.query.parameterlist.size";
+  private static final int TASK_ID_LIST_LIMIT_DEFAULT = 999;
+
   private static final Logger LOG = LoggerFactory.getLogger(
       Configuration.class);
 
@@ -2518,5 +2526,15 @@ public class Configuration {
   public Integer getSNMPUdpBindPort() {
     String udpPort = properties.getProperty(ALERTS_SNMP_DISPATCH_UDP_PORT);
     return StringUtils.isEmpty(udpPort) ? null : Integer.parseInt(udpPort);
+  }
+
+  /**
+   * Returns the number of tasks that can be queried from the database at once
+   * In the case of more tasks, multiple queries are issued
+   * @return
+   */
+  public int getTaskIdListLimit() {
+    return Integer.parseInt(properties.getProperty(TASK_ID_LIST_LIMIT,
+            String.valueOf(TASK_ID_LIST_LIMIT_DEFAULT)));
   }
 }
