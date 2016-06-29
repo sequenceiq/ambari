@@ -427,6 +427,21 @@ public class AmbariCustomCommandExecutionHelper {
 
       roleParams.put(COMPONENT_CATEGORY, componentInfo.getCategory());
       execCmd.setRoleParams(roleParams);
+
+      // perform any server side command related logic - eg - set desired states on restart
+      applyCustomCommandBackendLogic(cluster, serviceName, componentName, commandName, hostName);
+    }
+  }
+
+  private void applyCustomCommandBackendLogic(Cluster cluster, String serviceName, String componentName, String commandName, String hostname) throws AmbariException {
+    switch (commandName) {
+      case "RESTART":
+        LOG.info("Updating desired state on RESTART for the service [{}], service component [{}]", serviceName, componentName);
+        cluster.getService(serviceName).getServiceComponent(componentName).getServiceComponentHost(hostname).setDesiredState(State.STARTED);
+        break;
+      default:
+        LOG.debug("No backend operations needed for the custom command: {}", commandName);
+        break;
     }
   }
 
