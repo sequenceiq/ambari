@@ -18,17 +18,18 @@
 
 package org.apache.ambari.server.controller;
 
-import com.google.common.util.concurrent.AbstractScheduledService;
-import com.google.common.util.concurrent.ServiceManager;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.google.inject.name.Names;
-import com.google.inject.persist.PersistModule;
-import com.google.inject.persist.jpa.AmbariJpaPersistModule;
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+import java.beans.PropertyVetoException;
+import java.lang.annotation.Annotation;
+import java.security.SecureRandom;
+import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
+
 import org.apache.ambari.server.AmbariService;
 import org.apache.ambari.server.EagerSingleton;
 import org.apache.ambari.server.StaticallyInject;
@@ -124,17 +125,17 @@ import org.springframework.security.crypto.password.StandardPasswordEncoder;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
-import java.beans.PropertyVetoException;
-import java.lang.annotation.Annotation;
-import java.security.SecureRandom;
-import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
+import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.inject.name.Names;
+import com.google.inject.persist.PersistModule;
+import com.google.inject.persist.jpa.AmbariJpaPersistModule;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 import static org.eclipse.persistence.config.PersistenceUnitProperties.CREATE_JDBC_DDL_FILE;
 import static org.eclipse.persistence.config.PersistenceUnitProperties.CREATE_ONLY;
@@ -623,7 +624,7 @@ public class ControllerModule extends AbstractModule {
     AssignableTypeFilter filter = new AssignableTypeFilter(AbstractCheckDescriptor.class);
     scanner.addIncludeFilter(filter);
 
-    Set<BeanDefinition> beanDefinitions = scanner.findCandidateComponents(AMBARI_PACKAGE);
+    Set<BeanDefinition> beanDefinitions = scanner.findCandidateComponents(AbstractCheckDescriptor.class.getPackage().getName());
 
     // no dispatchers is a problem
     if (null == beanDefinitions || beanDefinitions.size() == 0) {
