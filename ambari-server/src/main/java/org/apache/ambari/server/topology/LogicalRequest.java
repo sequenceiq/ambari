@@ -37,7 +37,6 @@ import org.apache.ambari.server.controller.AmbariServer;
 import org.apache.ambari.server.controller.RequestStatusResponse;
 import org.apache.ambari.server.controller.ShortTaskStatus;
 import org.apache.ambari.server.orm.dao.HostRoleCommandStatusSummaryDTO;
-import org.apache.ambari.server.orm.entities.HostRoleCommandEntity;
 import org.apache.ambari.server.orm.entities.StageEntity;
 import org.apache.ambari.server.orm.entities.TopologyHostGroupEntity;
 import org.apache.ambari.server.orm.entities.TopologyHostRequestEntity;
@@ -59,13 +58,15 @@ public class LogicalRequest extends Request {
   private final ClusterTopology topology;
 
   private static AmbariManagementController controller;
+  private final org.apache.ambari.server.configuration.Configuration ambariConfiguration;
 
   private static final AtomicLong hostIdCounter = new AtomicLong(1);
 
   private final static Logger LOG = LoggerFactory.getLogger(LogicalRequest.class);
 
 
-  public LogicalRequest(Long id, TopologyRequest request, ClusterTopology topology)
+  public LogicalRequest(Long id, TopologyRequest request, ClusterTopology topology,
+                        org.apache.ambari.server.configuration.Configuration ambariConfiguration)
       throws AmbariException {
 
     //todo: abstract usage of controller, etc ...
@@ -74,11 +75,12 @@ public class LogicalRequest extends Request {
     setRequestContext(String.format("Logical Request: %s", request.getDescription()));
 
     this.topology = topology;
+    this.ambariConfiguration = ambariConfiguration;
     createHostRequests(request, topology);
   }
 
-  public LogicalRequest(Long id, TopologyRequest request, ClusterTopology topology,
-                        TopologyLogicalRequestEntity requestEntity) throws AmbariException {
+  public LogicalRequest(Long id, TopologyRequest request, ClusterTopology topology, TopologyLogicalRequestEntity requestEntity,
+                        org.apache.ambari.server.configuration.Configuration ambariConfiguration) throws AmbariException {
 
     //todo: abstract usage of controller, etc ...
     super(id, topology.getClusterId(), getController().getClusters());
@@ -86,6 +88,7 @@ public class LogicalRequest extends Request {
     setRequestContext(String.format("Logical Request: %s", request.getDescription()));
 
     this.topology = topology;
+    this.ambariConfiguration = ambariConfiguration;
     createHostRequests(topology, requestEntity);
   }
 
@@ -206,8 +209,9 @@ public class LogicalRequest extends Request {
       //todo: not sure what this byte array is???
       //stage.setClusterHostInfo();
       stage.setClusterId(getClusterId());
-      stage.setSkippable(false);
-      stage.setAutoSkipFailureSupported(false);
+      boolean skipFailure = hostRequest.shouldSkipFailure();
+      stage.setSkippable(skipFailure);
+      stage.setAutoSkipFailureSupported(skipFailure);
       // getTaskEntities() sync's state with physical tasks
       stage.setHostRoleCommands(hostRequest.getTaskEntities());
 
@@ -361,24 +365,24 @@ public class LogicalRequest extends Request {
   private void createHostRequests(TopologyRequest request, ClusterTopology topology) {
     Map<String, HostGroupInfo> hostGroupInfoMap = request.getHostGroupInfo();
     Blueprint blueprint = topology.getBlueprint();
+    boolean skipFailure = ambariConfiguration.shouldSkipFailure();;
     for (HostGroupInfo hostGroupInfo : hostGroupInfoMap.values()) {
       String groupName = hostGroupInfo.getHostGroupName();
       int hostCardinality = hostGroupInfo.getRequestedHostCount();
       List<String> hostnames = new ArrayList<String>(hostGroupInfo.getHostNames());
-
       for (int i = 0; i < hostCardinality; ++i) {
         if (! hostnames.isEmpty()) {
           // host names are specified
           String hostname = hostnames.get(i);
           HostRequest hostRequest = new HostRequest(getRequestId(), hostIdCounter.getAndIncrement(), getClusterId(),
-              hostname, blueprint.getName(), blueprint.getHostGroup(groupName), null, topology);
+              hostname, blueprint.getName(), blueprint.getHostGroup(groupName), null, topology, skipFailure);
           synchronized (requestsWithReservedHosts) {
             requestsWithReservedHosts.put(hostname, hostRequest);
           }
         } else {
           // host count is specified
           HostRequest hostRequest = new HostRequest(getRequestId(), hostIdCounter.getAndIncrement(), getClusterId(),
-              null, blueprint.getName(), blueprint.getHostGroup(groupName), hostGroupInfo.getPredicate(), topology);
+              null, blueprint.getName(), blueprint.getHostGroup(groupName), hostGroupInfo.getPredicate(), topology, skipFailure);
           outstandingHostRequests.add(hostRequest);
         }
       }
@@ -392,7 +396,7 @@ public class LogicalRequest extends Request {
 
   private void createHostRequests(ClusterTopology topology,
                                   TopologyLogicalRequestEntity requestEntity) {
-
+    boolean skipFailure = ambariConfiguration.shouldSkipFailure();
     for (TopologyHostRequestEntity hostRequestEntity : requestEntity.getTopologyHostRequestEntities()) {
       Long hostRequestId = hostRequestEntity.getId();
       synchronized (hostIdCounter) {
@@ -407,7 +411,7 @@ public class LogicalRequest extends Request {
 
       //todo: move predicate processing to host request
       HostRequest hostRequest = new HostRequest(getRequestId(), hostRequestId,
-          reservedHostName, topology, hostRequestEntity);
+          reservedHostName, topology, hostRequestEntity, skipFailure);
 
       allHostRequests.add(hostRequest);
       if (! hostRequest.isCompleted()) {

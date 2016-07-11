@@ -548,7 +548,7 @@ public class HostResourceProvider extends AbstractControllerResourceProvider {
     }
   }
 
-  public RequestStatusResponse install(final String cluster, final String hostname)
+  public RequestStatusResponse install(final String cluster, final String hostname, final boolean skipFailure)
       throws ResourceAlreadyExistsException,
       SystemException,
       NoSuchParentResourceException,
@@ -556,7 +556,7 @@ public class HostResourceProvider extends AbstractControllerResourceProvider {
 
 
     return ((HostComponentResourceProvider) getResourceProvider(Resource.Type.HostComponent)).
-        install(cluster, hostname);
+        install(cluster, hostname, skipFailure);
   }
 
   public RequestStatusResponse start(final String cluster, final String hostname)

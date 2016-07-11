@@ -37,6 +37,7 @@ import org.apache.ambari.server.actionmanager.HostRoleCommand;
 import org.apache.ambari.server.actionmanager.HostRoleStatus;
 import org.apache.ambari.server.actionmanager.Stage;
 import org.apache.ambari.server.api.services.BaseRequest;
+import org.apache.ambari.server.configuration.Configuration;
 import org.apache.ambari.server.controller.AmbariManagementController;
 import org.apache.ambari.server.controller.AmbariServer;
 import org.apache.ambari.server.controller.ExecuteActionRequest;
@@ -1316,7 +1317,8 @@ public class RequestResourceProviderTest {
     expect(topologyRequest.getHostGroupInfo()).andReturn(Collections.<String, HostGroupInfo>emptyMap()).anyTimes();
     expect(topologyRequest.getBlueprint()).andReturn(null).anyTimes();
 
-
+    org.apache.ambari.server.configuration.Configuration ambariConfiguration = createMock(Configuration.class);
+    expect(ambariConfiguration.shouldSkipFailure()).andReturn(true).anyTimes();
 
     PowerMock.mockStatic(AmbariServer.class);
     expect(AmbariServer.getController()).andReturn(managementController).anyTimes();
@@ -1324,11 +1326,12 @@ public class RequestResourceProviderTest {
     PowerMock.replayAll(
       topologyRequest,
       topology,
+      ambariConfiguration,
       managementController,
       clusters);
 
 
-    LogicalRequest logicalRequest = new LogicalRequest(200L, topologyRequest, topology);
+    LogicalRequest logicalRequest = new LogicalRequest(200L, topologyRequest, topology, ambariConfiguration);
 
     reset(topologyManager);
 
@@ -1366,7 +1369,7 @@ public class RequestResourceProviderTest {
 
     // verify
     PowerMock.verifyAll();
-    verify(actionManager, requestMock, requestDAO, hrcDAO, topologyManager);
+    verify(actionManager, requestMock, requestDAO, hrcDAO, topologyManager, ambariConfiguration);
 
     Assert.assertEquals(1, resources.size());
     for (Resource resource : resources) {

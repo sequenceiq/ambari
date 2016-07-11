@@ -64,6 +64,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.apache.ambari.server.controller.internal.ProvisionAction.INSTALL_ONLY;
+import static org.easymock.EasyMock.anyBoolean;
 import static org.easymock.EasyMock.anyLong;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -144,7 +145,8 @@ public class ClusterDeployWithHostsSyspreppedTest {
   private HostRoleCommand hostRoleCommandInstallComponent3;
   @Mock(type = MockType.NICE)
   private HostRoleCommand hostRoleCommandInstallComponent4;
-
+  @Mock(type = MockType.NICE)
+  private org.apache.ambari.server.configuration.Configuration ambariConfiguration;
 
   @Mock(type = MockType.NICE)
   private ComponentInfo serviceComponentInfo;
@@ -310,13 +312,17 @@ public class ClusterDeployWithHostsSyspreppedTest {
     expect(group2.getName()).andReturn("group2").anyTimes();
     expect(group2.getServices()).andReturn(Arrays.asList("service1", "service2")).anyTimes();
     expect(group2.getStack()).andReturn(stack).anyTimes();
+    expect(ambariConfiguration.shouldSkipFailure()).andReturn(false).anyTimes();
 
     // Create partial mock to allow actual logical request creation
     logicalRequestFactory = createMockBuilder(LogicalRequestFactory.class).addMockedMethod(
       LogicalRequestFactory.class.getMethod("createRequest",
         Long.class, TopologyRequest.class, ClusterTopology.class,
         TopologyLogicalRequestEntity.class)).createMock();
-    Field f = TopologyManager.class.getDeclaredField("logicalRequestFactory");
+    Field f = LogicalRequestFactory.class.getDeclaredField("ambariConfiguration");
+    f.setAccessible(true);
+    f.set(logicalRequestFactory, ambariConfiguration);
+    f = TopologyManager.class.getDeclaredField("logicalRequestFactory");
     f.setAccessible(true);
     f.set(topologyManager, logicalRequestFactory);
 
@@ -347,9 +353,9 @@ public class ClusterDeployWithHostsSyspreppedTest {
 
 
     expect(ambariContext.createAmbariTask(anyLong(), anyLong(), eq("component3"),
-      anyString(), eq(AmbariContext.TaskType.INSTALL))).andReturn(hostRoleCommandInstallComponent3).times(3);
+      anyString(), eq(AmbariContext.TaskType.INSTALL), anyBoolean())).andReturn(hostRoleCommandInstallComponent3).times(3);
     expect(ambariContext.createAmbariTask(anyLong(), anyLong(), eq("component4"),
-      anyString(), eq(AmbariContext.TaskType.INSTALL))).andReturn(hostRoleCommandInstallComponent4).times(2);
+      anyString(), eq(AmbariContext.TaskType.INSTALL), anyBoolean())).andReturn(hostRoleCommandInstallComponent4).times(2);
 
     expect(hostRoleCommandInstallComponent3.getTaskId()).andReturn(1L).atLeastOnce();
     expect(hostRoleCommandInstallComponent3.getRoleCommand()).andReturn(RoleCommand.INSTALL).atLeastOnce();
@@ -380,7 +386,7 @@ public class ClusterDeployWithHostsSyspreppedTest {
       configurationRequest, configurationRequest2, configurationRequest3, requestStatusResponse, executor,
       persistedState, securityConfigurationFactory, credentialStoreService, clusterController, resourceProvider,
       mockFuture, managementController, clusters, cluster, hostRoleCommandInstallComponent3,
-      hostRoleCommandInstallComponent4, serviceComponentInfo, clientComponentInfo);
+      hostRoleCommandInstallComponent4, serviceComponentInfo, clientComponentInfo, ambariConfiguration);
 
     Class clazz = TopologyManager.class;
 
@@ -395,12 +401,12 @@ public class ClusterDeployWithHostsSyspreppedTest {
   public void tearDown() {
     verify(blueprint, stack, request, group1, group2, ambariContext, logicalRequestFactory,
       logicalRequest, configurationRequest, configurationRequest2, configurationRequest3,
-      requestStatusResponse, executor, persistedState, mockFuture,
+      requestStatusResponse, executor, persistedState, mockFuture, ambariConfiguration,
       managementController, clusters, cluster, hostRoleCommandInstallComponent3, hostRoleCommandInstallComponent4);
 
     reset(blueprint, stack, request, group1, group2, ambariContext, logicalRequestFactory,
       logicalRequest, configurationRequest, configurationRequest2, configurationRequest3,
-      requestStatusResponse, executor, persistedState, mockFuture,
+      requestStatusResponse, executor, persistedState, mockFuture, ambariConfiguration,
       managementController, clusters, cluster, hostRoleCommandInstallComponent3, hostRoleCommandInstallComponent4);
   }
 

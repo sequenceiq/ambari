@@ -18,6 +18,8 @@
 
 package org.apache.ambari.server.topology;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.orm.entities.TopologyLogicalRequestEntity;
 
@@ -25,16 +27,20 @@ import org.apache.ambari.server.orm.entities.TopologyLogicalRequestEntity;
  * Factory for creating logical requests
  */
 //todo: throw more meaningful exception
+@Singleton
 public class LogicalRequestFactory {
+  @Inject
+  private org.apache.ambari.server.configuration.Configuration ambariConfiguration;
+
   public LogicalRequest createRequest(Long id, TopologyRequest topologyRequest, ClusterTopology topology)
       throws AmbariException {
 
-    return new LogicalRequest(id, topologyRequest, topology);
+    return new LogicalRequest(id, topologyRequest, topology, ambariConfiguration);
   }
 
   public LogicalRequest createRequest(Long id, TopologyRequest topologyRequest, ClusterTopology topology,
                                       TopologyLogicalRequestEntity requestEntity) throws AmbariException {
 
-    return new LogicalRequest(id, topologyRequest, topology, requestEntity);
+    return new LogicalRequest(id, topologyRequest, topology, requestEntity, ambariConfiguration);
   }
 }

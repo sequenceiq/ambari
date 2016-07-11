@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import static org.apache.ambari.server.controller.internal.ProvisionAction.INSTALL_ONLY;
+import static org.easymock.EasyMock.anyBoolean;
 import static org.easymock.EasyMock.anyLong;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -140,7 +141,8 @@ public class ClusterInstallWithoutStartTest {
   private Cluster cluster;
   @Mock(type = MockType.NICE)
   private HostRoleCommand hostRoleCommand;
-
+  @Mock(type = MockType.NICE)
+  private org.apache.ambari.server.configuration.Configuration ambariConfiguration;
 
   @Mock(type = MockType.NICE)
   private ComponentInfo serviceComponentInfo;
@@ -306,13 +308,17 @@ public class ClusterInstallWithoutStartTest {
     expect(group2.getName()).andReturn("group2").anyTimes();
     expect(group2.getServices()).andReturn(Arrays.asList("service1", "service2")).anyTimes();
     expect(group2.getStack()).andReturn(stack).anyTimes();
+    expect(ambariConfiguration.shouldSkipFailure()).andReturn(false).anyTimes();
 
     // Create partial mock to allow actual logical request creation
     logicalRequestFactory = createMockBuilder(LogicalRequestFactory.class).addMockedMethod(
       LogicalRequestFactory.class.getMethod("createRequest",
         Long.class, TopologyRequest.class, ClusterTopology.class,
         TopologyLogicalRequestEntity.class)).createMock();
-    Field f = TopologyManager.class.getDeclaredField("logicalRequestFactory");
+    Field f = LogicalRequestFactory.class.getDeclaredField("ambariConfiguration");
+    f.setAccessible(true);
+    f.set(logicalRequestFactory, ambariConfiguration);
+    f = TopologyManager.class.getDeclaredField("logicalRequestFactory");
     f.setAccessible(true);
     f.set(topologyManager, logicalRequestFactory);
 
@@ -341,7 +347,7 @@ public class ClusterInstallWithoutStartTest {
       andReturn(Collections.singletonList(configurationRequest3)).once();
     // INSTALL task expectation
     expect(ambariContext.createAmbariTask(anyLong(), anyLong(), anyString(),
-      anyString(), eq(AmbariContext.TaskType.INSTALL))).andReturn(hostRoleCommand).atLeastOnce();
+      anyString(), eq(AmbariContext.TaskType.INSTALL), anyBoolean())).andReturn(hostRoleCommand).atLeastOnce();
     expect(hostRoleCommand.getTaskId()).andReturn(1L).atLeastOnce();
     expect(hostRoleCommand.getRoleCommand()).andReturn(RoleCommand.INSTALL).atLeastOnce();
     expect(hostRoleCommand.getRole()).andReturn(Role.INSTALL_PACKAGES).atLeastOnce();
@@ -363,7 +369,7 @@ public class ClusterInstallWithoutStartTest {
     expectLastCall().once();
 
     replay(blueprint, stack, request, group1, group2, ambariContext, logicalRequestFactory, logicalRequest,
-      configurationRequest, configurationRequest2, configurationRequest3, requestStatusResponse, executor,
+      configurationRequest, configurationRequest2, configurationRequest3, requestStatusResponse, executor, ambariConfiguration,
       persistedState, securityConfigurationFactory, credentialStoreService, clusterController, resourceProvider,
       mockFuture, managementController, clusters, cluster, hostRoleCommand, serviceComponentInfo, clientComponentInfo);
 
@@ -380,12 +386,12 @@ public class ClusterInstallWithoutStartTest {
   public void tearDown() {
     verify(blueprint, stack, request, group1, group2, ambariContext, logicalRequestFactory,
       logicalRequest, configurationRequest, configurationRequest2, configurationRequest3,
-      requestStatusResponse, executor, persistedState, mockFuture,
+      requestStatusResponse, executor, persistedState, mockFuture, ambariConfiguration,
       managementController, clusters, cluster, hostRoleCommand);
 
     reset(blueprint, stack, request, group1, group2, ambariContext, logicalRequestFactory,
       logicalRequest, configurationRequest, configurationRequest2, configurationRequest3,
-      requestStatusResponse, executor, persistedState, mockFuture,
+      requestStatusResponse, executor, persistedState, mockFuture, ambariConfiguration,
       managementController, clusters, cluster, hostRoleCommand);
   }
 

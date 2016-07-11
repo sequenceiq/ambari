@@ -313,6 +313,7 @@ public class Configuration {
   public static final String KERBEROS_KEYTAB_CACHE_DIR_KEY = "kerberos.keytab.cache.dir";
   public static final String KERBEROS_KEYTAB_CACHE_DIR_DEFAULT = "/var/lib/ambari-server/data/cache";
 
+  public static final String DEPLOYMENT_SKIP_FAILURE = "deployment.skip_failure";
   /**
    * Recovery related configuration
    */
@@ -2421,6 +2422,10 @@ public class Configuration {
    */
   public boolean isMetricsCacheDisabled() {
     return Boolean.parseBoolean(properties.getProperty(TIMELINE_METRICS_CACHE_DISABLE, "false"));
+  }
+
+  public boolean shouldSkipFailure() {
+    return Boolean.parseBoolean(properties.getProperty(DEPLOYMENT_SKIP_FAILURE, "false"));
   }
 
   /**
