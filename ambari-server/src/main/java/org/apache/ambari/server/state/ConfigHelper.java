@@ -79,6 +79,7 @@ public class ConfigHelper {
   public static final String CLUSTER_ENV_RETRY_ENABLED = "command_retry_enabled";
   public static final String CLUSTER_ENV_RETRY_COMMANDS = "commands_to_retry";
   public static final String CLUSTER_ENV_RETRY_MAX_TIME_IN_SEC = "command_retry_max_time_in_sec";
+  public static final String COMMAND_RETRY_MAX_TIME_IN_SEC_DEFAULT = "600";
 
   public static final String HTTP_ONLY = "HTTP_ONLY";
   public static final String HTTPS_ONLY = "HTTPS_ONLY";
@@ -444,7 +445,7 @@ public class ConfigHelper {
    */
   public Set<String> findConfigTypesByPropertyName(StackId stackId, String propertyName, String clusterName) throws AmbariException {
     StackInfo stack = ambariMetaInfo.getStack(stackId.getStackName(),
-        stackId.getStackVersion());
+                                              stackId.getStackVersion());
 
     Set<String> result = new HashSet<String>();
 
