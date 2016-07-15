@@ -700,15 +700,31 @@ public abstract class KerberosOperationHandler {
    * @param command an array of String value representing the command and its arguments
    * @return a ShellCommandUtil.Result declaring the result of the operation
    * @throws KerberosOperationException
+   * @see #executeCommand(String[], ShellCommandUtil.InteractiveHandler)
    */
   protected ShellCommandUtil.Result executeCommand(String[] command)
       throws KerberosOperationException {
+    return executeCommand(command, null);
+  }
 
+  /**
+   * Executes a shell command.
+   * <p/>
+   * See {@link org.apache.ambari.server.utils.ShellCommandUtil#runCommand(String[])}
+   *
+   * @param command an array of String value representing the command and its arguments
+   * @param interactiveHandler a handler to provide responses to queries from the command,
+   *                           or null if no queries are expected
+   * @return a ShellCommandUtil.Result declaring the result of the operation
+   * @throws KerberosOperationException
+   * @see #executeCommand(String[], ShellCommandUtil.InteractiveHandler)
+   */
+  protected ShellCommandUtil.Result executeCommand(String[] command, ShellCommandUtil.InteractiveHandler interactiveHandler) throws KerberosOperationException {
     if ((command == null) || (command.length == 0)) {
       return null;
     } else {
       try {
-        return ShellCommandUtil.runCommand(command);
+        return ShellCommandUtil.runCommand(command, interactiveHandler);
       } catch (IOException e) {
         String message = String.format("Failed to execute the command: %s", e.getLocalizedMessage());
         LOG.error(message, e);

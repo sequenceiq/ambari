@@ -21,9 +21,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 
 /**
  * Logs OpenSsl command exit code with description
@@ -48,12 +50,12 @@ public class ShellCommandUtil {
 
   }
 
-  public static String hideOpenSslPassword(String command){
+  public static String hideOpenSslPassword(String command) {
     int start;
-    if(command.contains(PASS_TOKEN)){
-      start = command.indexOf(PASS_TOKEN)+PASS_TOKEN.length();
-    } else if (command.contains(KEY_TOKEN)){
-      start = command.indexOf(KEY_TOKEN)+KEY_TOKEN.length();
+    if (command.contains(PASS_TOKEN)) {
+      start = command.indexOf(PASS_TOKEN) + PASS_TOKEN.length();
+    } else if (command.contains(KEY_TOKEN)) {
+      start = command.indexOf(KEY_TOKEN) + KEY_TOKEN.length();
     } else {
       return command;
     }
@@ -63,7 +65,7 @@ public class ShellCommandUtil {
   
   public static String getOpenSslCommandResult(String command, int exitCode) {
     return new StringBuilder().append("Command ").append(hideOpenSslPassword(command)).append(" was finished with exit code: ")
-            .append(exitCode).append(" - ").append(getOpenSslExitCodeDescription(exitCode)).toString();
+        .append(exitCode).append(" - ").append(getOpenSslExitCodeDescription(exitCode)).toString();
   }
 
   private static String getOpenSslExitCodeDescription(int exitCode) {
@@ -166,6 +168,16 @@ public class ShellCommandUtil {
 
   public static Result runCommand(String [] args) throws IOException,
           InterruptedException {
+    return runCommand(args, null);
+  }
+
+  /**
+   * @param args               a String[] of the command and its arguments
+   * @param interactiveHandler a handler to provide responses to queries from the command,
+   *                           or null if no queries are expected
+   */
+  public static Result runCommand(String [] args, InteractiveHandler interactiveHandler) throws IOException,
+          InterruptedException {
     ProcessBuilder builder = new ProcessBuilder(args);
     Process process;
     if (WINDOWS) {
@@ -180,10 +192,38 @@ public class ShellCommandUtil {
     } else {
       process = builder.start();
     }
+
+    // If an interactiveHandler is supplied ask it for responses to queries from the command
+    // using the InputStream and OutputStream retrieved from the Process object. Use the remainder
+    // of the data from the InputStream as the data for stdout.
+    InputStream inputStream = process.getInputStream();
+    if (interactiveHandler != null) {
+      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
+      BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+      while (!interactiveHandler.done()) {
+        StringBuilder query = new StringBuilder();
+
+        while (reader.ready()) {
+          query.append((char) reader.read());
+        }
+
+        String response = interactiveHandler.getResponse(query.toString());
+
+        if (response != null) {
+          writer.write(response);
+          writer.newLine();
+          writer.flush();
+        }
+      }
+
+      writer.close();
+    }
+
     //TODO: not sure whether output buffering will work properly
     // if command output is too intensive
     process.waitFor();
-    String stdout = streamToString(process.getInputStream());
+    String stdout = streamToString(inputStream);
     String stderr = streamToString(process.getErrorStream());
     int exitCode = process.exitValue();
     return new Result(exitCode, stdout, stderr);
@@ -227,5 +267,30 @@ public class ShellCommandUtil {
     public boolean isSuccessful() {
       return exitCode == 0;
     }
+  }
+
+  /**
+   * InteractiveHandler is a handler for interactive sessions with command line commands.
+   * <p>
+   * Classes should implement this interface if there is a need to supply responses to queries from
+   * the executed command (interactively, via stdin).
+   */
+  public interface InteractiveHandler {
+
+    /**
+     * Indicates whether this {@link InteractiveHandler} expects more queries (<code>true</code>
+     * or not (<code>false</code>)
+     *
+     * @return true if more queries are expected; false otherwise
+     */
+    boolean done();
+
+    /**
+     * Gnven a query, returns the relative response to send to the shell command (via stdin)
+     *
+     * @param query a string containing the query that needs a response
+     * @return a string or null if no response is needed
+     */
+    String getResponse(String query);
   }
 }
