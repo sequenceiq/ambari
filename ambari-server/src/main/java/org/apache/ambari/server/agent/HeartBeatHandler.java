@@ -450,7 +450,7 @@ public class HeartBeatHandler {
           now));
     }
 
-    configHelper.invalidateStaleConfigsCache(hostname);
+    configHelper.invalidateStaleConfigsCache(hostname, null);
 
     response.setStatusCommands(cmds);
 

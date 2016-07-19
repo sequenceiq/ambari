@@ -1751,7 +1751,7 @@ public class ServiceComponentHostImpl implements ServiceComponentHost {
       if (desiredStateEntity != null) {
         desiredStateEntity.setRestartRequired(restartRequired);
         saveComponentDesiredStateEntityIfPersisted();
-        helper.invalidateStaleConfigsCache(this);
+        helper.invalidateStaleConfigsCache(this, null);
       } else {
         LOG.warn("Setting a member on an entity object that may have been " +
           "previously deleted, serviceName = " + getServiceName() + ", " +
