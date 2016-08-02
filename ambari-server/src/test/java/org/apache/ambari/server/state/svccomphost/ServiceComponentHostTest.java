@@ -805,21 +805,11 @@ public class ServiceComponentHostTest {
     actual.put("hdfs-site", new HashMap<String, String>() {{ put ("tag", "version1"); }});
 
     sch1.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch1.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache
-    // after start/restart command execution completed
-    sch1.setRestartRequired(false);
     // HDP-x/HDFS/hdfs-site up to date, only for sch1
     Assert.assertFalse(sch1.convertToResponse(null).isStaleConfig());
     Assert.assertTrue(sch2.convertToResponse(null).isStaleConfig());
 
     sch2.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch2.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache(
-    // after start/restart command execution completed)
-    sch2.setRestartRequired(false);
     // HDP-x/HDFS/hdfs-site up to date for both
     Assert.assertFalse(sch1.convertToResponse(null).isStaleConfig());
     Assert.assertFalse(sch2.convertToResponse(null).isStaleConfig());
@@ -866,21 +856,11 @@ public class ServiceComponentHostTest {
 
     actual.get("hdfs-site").put(configGroup.getId().toString(), "version3");
     sch2.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch2.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache
-    // after start/restart command execution completed
-    sch2.setRestartRequired(false);
     // HDP-x/HDFS/hdfs-site updated host to changed property
     Assert.assertTrue(sch1.convertToResponse(null).isStaleConfig());
     Assert.assertFalse(sch2.convertToResponse(null).isStaleConfig());
 
     sch1.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch1.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache
-    // after start/restart command execution completed
-    sch1.setRestartRequired(false);
     // HDP-x/HDFS/hdfs-site updated host to changed property
     Assert.assertFalse(sch1.convertToResponse(null).isStaleConfig());
     Assert.assertFalse(sch2.convertToResponse(null).isStaleConfig());
@@ -937,11 +917,6 @@ public class ServiceComponentHostTest {
     tags.put(id.toString(), "version2");
     actual.put("core-site", tags);
     sch3.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch3.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache
-    // after start/restart command execution completed
-    sch3.setRestartRequired(false);
 
     Assert.assertFalse(sch3.convertToResponse(null).isStaleConfig());
 
@@ -953,11 +928,6 @@ public class ServiceComponentHostTest {
 
     tags.remove(id.toString());
     sch3.updateActualConfigs(actual);
-    // previous value from cache
-    Assert.assertTrue(sch3.convertToResponse(null).isStaleConfig());
-    //reset restartRequired flag + invalidating isStale cache
-    // after start/restart command execution completed
-    sch3.setRestartRequired(false);
     Assert.assertFalse(sch3.convertToResponse(null).isStaleConfig());
   }
 
