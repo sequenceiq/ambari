@@ -55,6 +55,7 @@ import org.apache.ambari.server.controller.spi.ResourceProvider;
 import org.apache.ambari.server.controller.spi.SystemException;
 import org.apache.ambari.server.controller.spi.UnsupportedPropertyException;
 import org.apache.ambari.server.events.AmbariEvent;
+import org.apache.ambari.server.events.HostRemovedEvent;
 import org.apache.ambari.server.events.RequestFinishedEvent;
 import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.orm.dao.HostRoleCommandStatusSummaryDTO;
@@ -945,6 +946,35 @@ public class TopologyManager {
         }
       }
       return configTopologyResolved;
+    }
+  }
+
+  /**
+   *
+   * Removes a host from the available hosts when the host gets deleted.
+   * @param hostRemovedEvent the event containing the hostname
+   */
+  @Subscribe
+  public void processHostRemovedEvent(HostRemovedEvent hostRemovedEvent) {
+    LOG.info("Cleaning up caches on host removed event: {}", hostRemovedEvent.getHostName());
+
+    HostImpl toBeRemoved = null;
+
+    // synchronization is required here as the list may be modified concurrently. See comments in this whole class.
+    synchronized (availableHosts) {
+      for (HostImpl hostImpl : availableHosts) {
+        if (hostRemovedEvent.getHostName().equals(hostImpl.getHostName())) {
+          toBeRemoved = hostImpl;
+          break;
+        }
+      }
+
+      if (null != toBeRemoved) {
+        availableHosts.remove(toBeRemoved);
+        LOG.info("Removed host: [{}] from available hosts", toBeRemoved.getHostName());
+      } else {
+        LOG.info("Host [{}] not found in available hosts", toBeRemoved.getHostName());
+      }
     }
   }
 }
