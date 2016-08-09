@@ -43,6 +43,9 @@ public class TimelineMetricConfiguration {
   public static final String TIMELINE_METRICS_AGGREGATOR_CHECKPOINT_DIR =
     "timeline.metrics.aggregator.checkpoint.dir";
 
+  public static final String TIMELINE_METRIC_AGGREGATOR_SINK_CLASS =
+    "timeline.metrics.service.aggregator.sink.class";
+
   public static final String DEFAULT_CHECKPOINT_LOCATION =
     System.getProperty("java.io.tmpdir");
 
