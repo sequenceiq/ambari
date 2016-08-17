@@ -330,7 +330,7 @@ public class HostComponentResourceProvider extends AbstractControllerResourcePro
     return unsupportedProperties;
   }
 
-  public RequestStatusResponse install(String cluster, String hostname, boolean skipFailure) throws  SystemException,
+  public RequestStatusResponse install(String cluster, String hostname, Collection<String> startOnlyComponents, boolean skipFailure) throws  SystemException,
       UnsupportedPropertyException, NoSuchParentResourceException {
 
     RequestStageContainer requestStages;
@@ -342,7 +342,8 @@ public class HostComponentResourceProvider extends AbstractControllerResourcePro
     Map<String, String> requestInfo = new HashMap<>();
     requestInfo.put("context", String.format("Install components on host %s", hostname));
     requestInfo.put("phase", "INITIAL_INSTALL");
-    requestInfo.put(Setting.SETTING_NAME_SKIP_FAILURE, Boolean.toString(skipFailure));
+    requestInfo.put("startOnlyComponents", StringUtils.join(startOnlyComponents, ";"));
+
     Request installRequest = PropertyHelper.getUpdateRequest(installProperties, requestInfo);
 
     Predicate statePredicate = new EqualsPredicate<>(HOST_COMPONENT_STATE_PROPERTY_ID, "INIT");

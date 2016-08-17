@@ -426,7 +426,7 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
 
     StackId stackId = new StackId(request.getStackVersion());
     StackInfo stackInfo = ambariMetaInfo.getStack(stackId.getStackName(),
-        stackId.getStackVersion());
+      stackId.getStackVersion());
 
     if (stackInfo == null) {
       throw new StackAccessException("stackName=" + stackId.getStackName() + ", stackVersion=" + stackId.getStackVersion());
@@ -729,7 +729,7 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
       return;
     }
     Set<String> needRestartServices = ambariMetaInfo.getRestartRequiredServicesNames(
-        stackId.getStackName(), stackId.getStackVersion());
+      stackId.getStackName(), stackId.getStackVersion());
 
     if(needRestartServices.contains(service.getName())) {
       Map<String, ServiceComponent> m = service.getServiceComponents();
@@ -2798,11 +2798,8 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
 
             // Skip INSTALL task in case SysPrepped hosts and in case of server components. In case of server component
             // START task should run configuration script.
-            if (configs.skipInstallTasks() &&
-                  "INITIAL_INSTALL".equals(requestProperties.get("phase")) &&
-                    newState == State.INSTALLED && !isClientComponent(cluster, scHost)) {
-              LOG.info("Skipping create of INSTALL task for {} on {} because host is sysprepped.", scHost
-                .getServiceComponentName(), scHost.getHostName());
+            if (newState == State.INSTALLED && skipInstallTaskForComponent(requestProperties, cluster, scHost)) {
+              LOG.info("Skipping create of INSTALL task for {} on {}.", scHost.getServiceComponentName(), scHost.getHostName());
               scHost.setState(State.INSTALLED);
             } else {
               createHostAction(cluster, stage, scHost, configurations, configurationAttributes, configTags,
@@ -2893,15 +2890,25 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
   }
 
 
-  private boolean isClientComponent(Cluster cluster, ServiceComponentHost sch) throws AmbariException {
+  private boolean skipInstallTaskForComponent(Map<String, String> requestProperties, Cluster cluster,
+                                              ServiceComponentHost sch) throws AmbariException {
+    boolean isClientComponent = false;
     Service service = cluster.getService(sch.getServiceName());
     if (service != null) {
       ServiceComponent serviceComponent = service.getServiceComponent(sch.getServiceComponentName());
       if (serviceComponent != null) {
-        return serviceComponent.isClientComponent();
+        isClientComponent = serviceComponent.isClientComponent();
       }
     }
+
+    if (requestProperties.get("startOnlyComponents") != null &&
+      (requestProperties.get("startOnlyComponents").equals("ALL") || requestProperties.get("startOnlyComponents")
+        .contains(sch.getServiceComponentName())) &&
+      "INITIAL_INSTALL".equals(requestProperties.get("phase")) && !isClientComponent) {
+      return true;
+    }
     return false;
+
   }
 
   @Override

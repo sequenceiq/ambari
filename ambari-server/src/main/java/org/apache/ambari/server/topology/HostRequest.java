@@ -24,6 +24,7 @@ import org.apache.ambari.server.api.predicate.PredicateCompiler;
 import org.apache.ambari.server.controller.RequestStatusResponse;
 import org.apache.ambari.server.controller.ShortTaskStatus;
 import org.apache.ambari.server.controller.internal.HostResourceProvider;
+import org.apache.ambari.server.controller.internal.ProvisionAction;
 import org.apache.ambari.server.controller.internal.ResourceImpl;
 import org.apache.ambari.server.controller.internal.Stack;
 import org.apache.ambari.server.controller.spi.Predicate;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.ambari.server.controller.internal.ProvisionAction.INSTALL_ONLY;
+import static org.apache.ambari.server.controller.internal.ProvisionAction.START_ONLY;
 
 /**
  * Represents a set of requests to a single host such as install, start, etc.
@@ -188,6 +190,7 @@ public class HostRequest implements Comparable<HostRequest> {
     logicalTaskMap.put(installTask, new HashMap<String, Long>());
 
     boolean skipStartTaskCreate = topology.getProvisionAction().equals(INSTALL_ONLY);
+    boolean skipInstallTaskCreate = topology.getProvisionAction().equals(START_ONLY);
 
     StartHostTask startTask = null;
     if (!skipStartTaskCreate) {
@@ -200,6 +203,7 @@ public class HostRequest implements Comparable<HostRequest> {
 
     // lower level logical component level tasks which get mapped to physical tasks
     HostGroup hostGroup = getHostGroup();
+    Collection<String> startOnlyComponents = hostGroup.getComponentNames(START_ONLY);
     for (String component : hostGroup.getComponentNames()) {
       if (component == null || component.equals("AMBARI_SERVER")) {
         LOG.info("Skipping component {} when creating request\n", component);
@@ -215,8 +219,9 @@ public class HostRequest implements Comparable<HostRequest> {
 
       // Skip INSTALL task in case SysPrepped hosts and in case of server components. In case of server component
       // START task should run configuration script.
-      if (context.shouldSkipInstallTasks() && stack != null && !stack.getComponentInfo(component).isClient()) {
-        LOG.info("Skipping create of INSTALL task for {} on {} because host is sysprepped.", component, hostName);
+      if ((skipInstallTaskCreate || startOnlyComponents.contains(component))
+          && stack != null && !stack.getComponentInfo(component).isClient()) {
+        LOG.info("Skipping create of INSTALL task for {} on {}.", component, hostName);
       } else {
         HostRoleCommand logicalInstallTask = context.createAmbariTask(
           getRequestId(), id, component, hostName, AmbariContext.TaskType.INSTALL, skipFailure);
@@ -507,7 +512,8 @@ public class HostRequest implements Comparable<HostRequest> {
     @Override
     public void run() {
       LOG.info("HostRequest.InstallHostTask: Executing INSTALL task for host: " + hostname);
-      RequestStatusResponse response = clusterTopology.installHost(hostname, skipFailure);
+      boolean skipInstallTaskCreate = topology.getProvisionAction().equals(ProvisionAction.START_ONLY);
+      RequestStatusResponse response = clusterTopology.installHost(hostname, skipInstallTaskCreate, skipFailure);
       // map logical install tasks to physical install tasks
       List<ShortTaskStatus> underlyingTasks = response.getTasks();
       for (ShortTaskStatus task : underlyingTasks) {

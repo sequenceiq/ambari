@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.controller.RequestStatusResponse;
@@ -239,9 +238,20 @@ public class ClusterTopologyImpl implements ClusterTopology {
   }
 
   @Override
-  public RequestStatusResponse installHost(String hostName, boolean skipFailure) {
+  public RequestStatusResponse installHost(String hostName, boolean skipInstallTaskCreate, boolean skipFailure) {
     try {
-      return ambariContext.installHost(hostName, ambariContext.getClusterName(getClusterId()), skipFailure);
+      String hostGroupName = getHostGroupForHost(hostName);
+      HostGroup hostGroup = this.blueprint.getHostGroup(hostGroupName);
+
+      Collection<String> startOnlyComponents = new ArrayList<>();
+      if (skipInstallTaskCreate) {
+        startOnlyComponents.add("ALL");
+      } else {
+        // get the set of components that are marked as START_ONLY for this hostgroup
+        startOnlyComponents.addAll(hostGroup.getComponentNames(ProvisionAction.START_ONLY));
+      }
+
+      return ambariContext.installHost(hostName, ambariContext.getClusterName(getClusterId()), startOnlyComponents, skipFailure);
     } catch (AmbariException e) {
       LOG.error("Cannot get cluster name for clusterId = " + getClusterId(), e);
       throw new RuntimeException(e);
