@@ -2123,7 +2123,7 @@ public class AmbariMetaInfoTest {
 
       replay(config);
 
-      osFamily = new OsFamily(config);
+      osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
       f = c.getDeclaredField("osFamily");
       f.setAccessible(true);

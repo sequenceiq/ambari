@@ -176,13 +176,13 @@ public class ControllerModule extends AbstractModule {
   public ControllerModule() throws Exception {
     configuration = new Configuration();
     hostsMap = new HostsMap(configuration);
-    os_family = new OsFamily(configuration);
+    os_family = new OsFamily(configuration.getSharedResourcesDirPath());
   }
 
   public ControllerModule(Properties properties) throws Exception {
     configuration = new Configuration(properties);
     hostsMap = new HostsMap(configuration);
-    os_family = new OsFamily(configuration);
+    os_family = new OsFamily(configuration.getSharedResourcesDirPath());
   }
 
 

@@ -286,7 +286,7 @@ public class KerberosServiceMetaInfoTest {
       Configuration config = createNiceMock(Configuration.class);
       expect(config.getSharedResourcesDirPath()).andReturn("./src/test/resources").anyTimes();
       replay(config);
-      osFamily = new OsFamily(config);
+      osFamily = new OsFamily(config.getSharedResourcesDirPath());
       f = c.getDeclaredField("osFamily");
       f.setAccessible(true);
       f.set(this, osFamily);

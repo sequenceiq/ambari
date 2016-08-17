@@ -19,7 +19,6 @@ package org.apache.ambari.server.checks;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -30,12 +29,13 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import org.apache.ambari.server.AmbariException;
 import org.apache.ambari.server.api.services.AmbariMetaInfo;
 import org.apache.ambari.server.configuration.Configuration;
 import org.apache.ambari.server.orm.DBAccessor;
-import org.apache.ambari.server.orm.dao.MetainfoDAO;
-import org.apache.ambari.server.orm.entities.MetainfoEntity;
 import org.apache.ambari.server.state.ServiceInfo;
 import org.apache.ambari.server.utils.VersionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -44,20 +44,21 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
 
+
+@Singleton
 public class DatabaseConsistencyCheckHelper {
 
-  static Logger LOG = LoggerFactory.getLogger(DatabaseConsistencyCheckHelper.class);
+  private static Logger LOG = LoggerFactory.getLogger(DatabaseConsistencyCheckHelper.class);
 
   @Inject
-  private static Injector injector;
+  private AmbariMetaInfo ambariMetaInfo;
 
-  private static MetainfoDAO metainfoDAO;
-  private static Connection connection;
-  private static AmbariMetaInfo ambariMetaInfo;
-  private static DBAccessor dbAccessor;
+  @Inject
+  private DBAccessor dbAccessor;
+
+  @Inject
+  private Configuration configuration;
 
 
   private static boolean errorAvailable = false;
@@ -84,59 +85,28 @@ public class DatabaseConsistencyCheckHelper {
     warningAvailable = false;
   }
 
-  protected static void setInjector(Injector injector) {
-    DatabaseConsistencyCheckHelper.injector = injector;
-  }
 
-  public static void setConnection(Connection connection) {
-    DatabaseConsistencyCheckHelper.connection = connection;
-  }
-
-  /*
-    * method to close connection
-    * */
-  public static void closeConnection() {
-    try {
-      if (connection != null) {
-        connection.close();
-      }
-    } catch (SQLException e) {
-      LOG.error("Exception occurred during connection close procedure: ", e);
-    }
-  }
-
-  public static void checkDBVersionCompatible() throws AmbariException {
+  public void checkDBVersionCompatible() throws AmbariException {
     LOG.info("Checking DB store version");
+    String schemaVersion = ambariMetaInfo.getSchemaVersion();
 
-    if (metainfoDAO == null) {
-      metainfoDAO = injector.getInstance(MetainfoDAO.class);
-    }
-
-    MetainfoEntity schemaVersionEntity = metainfoDAO.findByKey(Configuration.SERVER_VERSION_KEY);
-    String schemaVersion = null;
-
-    if (schemaVersionEntity != null) {
-      schemaVersion = schemaVersionEntity.getMetainfoValue();
-    }
-
-    Configuration conf = injector.getInstance(Configuration.class);
-    File versionFile = new File(conf.getServerVersionFilePath());
+    File versionFile = new File(configuration.getServerVersionFilePath());
     if (!versionFile.exists()) {
       throw new AmbariException("Server version file does not exist.");
     }
     String serverVersion = null;
+
     try (Scanner scanner = new Scanner(versionFile)) {
       serverVersion = scanner.useDelimiter("\\Z").next();
-
     } catch (IOException ioe) {
       throw new AmbariException("Unable to read server version file.");
     }
 
-    if (schemaVersionEntity==null || VersionUtils.compareVersions(schemaVersion, serverVersion, 3) != 0) {
+    if (schemaVersion == null || VersionUtils.compareVersions(schemaVersion, serverVersion, 3) != 0) {
       String error = "Current database store version is not compatible with " +
-              "current server version"
-              + ", serverVersion=" + serverVersion
-              + ", schemaVersion=" + schemaVersion;
+          "current server version"
+          + ", serverVersion=" + serverVersion
+          + ", schemaVersion=" + schemaVersion;
       LOG.error(error);
       throw new AmbariException(error);
     }
@@ -144,7 +114,7 @@ public class DatabaseConsistencyCheckHelper {
     LOG.info("DB store version is compatible");
   }
 
-  public static void checkForNotMappedConfigsToCluster() {
+  public void checkForNotMappedConfigsToCluster() {
     LOG.info("Checking for configs not mapped to any cluster");
 
     String GET_NOT_MAPPED_CONFIGS_QUERY = "select type_name from clusterconfig where type_name not in (select type_name from clusterconfigmapping)";
@@ -152,15 +122,9 @@ public class DatabaseConsistencyCheckHelper {
     ResultSet rs = null;
     Statement statement = null;
 
-    if (connection == null) {
-      if (dbAccessor == null) {
-        dbAccessor = injector.getInstance(DBAccessor.class);
-      }
-      connection = dbAccessor.getConnection();
-    }
 
     try {
-      statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      statement = dbAccessor.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
       rs = statement.executeQuery(GET_NOT_MAPPED_CONFIGS_QUERY);
       if (rs != null) {
         while (rs.next()) {
@@ -198,26 +162,20 @@ public class DatabaseConsistencyCheckHelper {
   * it means that this version of config is actual. So, if any config type has more
   * than one selected version it's a bug and we are showing error message for user.
   * */
-  public static void checkForConfigsSelectedMoreThanOnce() {
+  public void checkForConfigsSelectedMoreThanOnce() {
     LOG.info("Checking for configs selected more than once");
 
     String GET_CONFIGS_SELECTED_MORE_THAN_ONCE_QUERY = "select c.cluster_name, ccm.type_name from clusterconfigmapping ccm " +
-            "join clusters c on ccm.cluster_id=c.cluster_id " +
-            "group by c.cluster_name, ccm.type_name " +
-            "having sum(selected) > 1";
+        "join clusters c on ccm.cluster_id=c.cluster_id " +
+        "group by c.cluster_name, ccm.type_name " +
+        "having sum(selected) > 1";
     Multimap<String, String> clusterConfigTypeMap = HashMultimap.create();
     ResultSet rs = null;
     Statement statement = null;
 
-    if (connection == null) {
-      if (dbAccessor == null) {
-        dbAccessor = injector.getInstance(DBAccessor.class);
-      }
-      connection = dbAccessor.getConnection();
-    }
 
     try {
-      statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      statement = dbAccessor.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
       rs = statement.executeQuery(GET_CONFIGS_SELECTED_MORE_THAN_ONCE_QUERY);
       if (rs != null) {
         while (rs.next()) {
@@ -226,7 +184,7 @@ public class DatabaseConsistencyCheckHelper {
 
         for (String clusterName : clusterConfigTypeMap.keySet()) {
           LOG.error("You have config(s), in cluster {}, that is(are) selected more than once in clusterconfigmapping table: {}",
-                  clusterName ,StringUtils.join(clusterConfigTypeMap.get(clusterName), ","));
+              clusterName, StringUtils.join(clusterConfigTypeMap.get(clusterName), ","));
           errorAvailable = true;
         }
       }
@@ -257,7 +215,7 @@ public class DatabaseConsistencyCheckHelper {
   * has related host state info in hoststate table.
   * If not then we are showing error.
   * */
-  public static void checkForHostsWithoutState() {
+  public void checkForHostsWithoutState() {
     LOG.info("Checking for hosts without state");
 
     String GET_HOSTS_WITHOUT_STATUS_QUERY = "select host_name from hosts where host_id not in (select host_id from hoststate)";
@@ -265,15 +223,9 @@ public class DatabaseConsistencyCheckHelper {
     ResultSet rs = null;
     Statement statement = null;
 
-    if (connection == null) {
-      if (dbAccessor == null) {
-        dbAccessor = injector.getInstance(DBAccessor.class);
-      }
-      connection = dbAccessor.getConnection();
-    }
 
     try {
-      statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      statement = dbAccessor.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
       rs = statement.executeQuery(GET_HOSTS_WITHOUT_STATUS_QUERY);
       if (rs != null) {
         while (rs.next()) {
@@ -313,28 +265,21 @@ public class DatabaseConsistencyCheckHelper {
   * two tables should have the same count of rows. If not then we are
   * showing error for user.
   * */
-  public static void checkHostComponentStatesCountEqualsHostComponentsDesiredStates() {
+  public void checkHostComponentStatesCountEqualsHostComponentsDesiredStates() {
     LOG.info("Checking host component states count equals host component desired states count");
 
     String GET_HOST_COMPONENT_STATE_COUNT_QUERY = "select count(*) from hostcomponentstate";
     String GET_HOST_COMPONENT_DESIRED_STATE_COUNT_QUERY = "select count(*) from hostcomponentdesiredstate";
     String GET_MERGED_TABLE_ROW_COUNT_QUERY = "select count(*) FROM hostcomponentstate hcs " +
-            "JOIN hostcomponentdesiredstate hcds ON hcs.service_name=hcds.service_name AND hcs.component_name=hcds.component_name AND hcs.host_id=hcds.host_id";
+        "JOIN hostcomponentdesiredstate hcds ON hcs.service_name=hcds.service_name AND hcs.component_name=hcds.component_name AND hcs.host_id=hcds.host_id";
     int hostComponentStateCount = 0;
     int hostComponentDesiredStateCount = 0;
     int mergedCount = 0;
     ResultSet rs = null;
     Statement statement = null;
 
-    if (connection == null) {
-      if (dbAccessor == null) {
-        dbAccessor = injector.getInstance(DBAccessor.class);
-      }
-      connection = dbAccessor.getConnection();
-    }
-
     try {
-      statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      statement = dbAccessor.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 
       rs = statement.executeQuery(GET_HOST_COMPONENT_STATE_COUNT_QUERY);
       if (rs != null) {
@@ -393,53 +338,43 @@ public class DatabaseConsistencyCheckHelper {
   * 4) Check if service has config which is not selected(has no actual config version) in clusterconfigmapping table.
   * If any issue was discovered, we are showing error message for user.
   * */
-  public static void checkServiceConfigs()  {
+  public void checkServiceConfigs() {
     LOG.info("Checking services and their configs");
 
     String GET_SERVICES_WITHOUT_CONFIGS_QUERY = "select c.cluster_name, service_name from clusterservices cs " +
-            "join clusters c on cs.cluster_id=c.cluster_id " +
-            "where service_name not in (select service_name from serviceconfig sc where sc.cluster_id=cs.cluster_id and sc.service_name=cs.service_name and sc.group_id is null)";
+        "join clusters c on cs.cluster_id=c.cluster_id " +
+        "where service_name not in (select service_name from serviceconfig sc where sc.cluster_id=cs.cluster_id and sc.service_name=cs.service_name and sc.group_id is null)";
     String GET_SERVICE_CONFIG_WITHOUT_MAPPING_QUERY = "select c.cluster_name, sc.service_name, sc.version from serviceconfig sc " +
-            "join clusters c on sc.cluster_id=c.cluster_id " +
-            "where service_config_id not in (select service_config_id from serviceconfigmapping) and group_id is null";
+        "join clusters c on sc.cluster_id=c.cluster_id " +
+        "where service_config_id not in (select service_config_id from serviceconfigmapping) and group_id is null";
     String GET_STACK_NAME_VERSION_QUERY = "select c.cluster_name, s.stack_name, s.stack_version from clusters c " +
-            "join stack s on c.desired_stack_id = s.stack_id";
+        "join stack s on c.desired_stack_id = s.stack_id";
     String GET_SERVICES_WITH_CONFIGS_QUERY = "select c.cluster_name, cs.service_name, cc.type_name, sc.version from clusterservices cs " +
-            "join serviceconfig sc on cs.service_name=sc.service_name and cs.cluster_id=sc.cluster_id " +
-            "join serviceconfigmapping scm on sc.service_config_id=scm.service_config_id " +
-            "join clusterconfig cc on scm.config_id=cc.config_id and sc.cluster_id=cc.cluster_id " +
-            "join clusters c on cc.cluster_id=c.cluster_id and sc.stack_id=c.desired_stack_id " +
-            "where sc.group_id is null and sc.service_config_id=(select max(service_config_id) from serviceconfig sc2 where sc2.service_name=sc.service_name and sc2.cluster_id=sc.cluster_id) " +
-            "group by c.cluster_name, cs.service_name, cc.type_name, sc.version";
+        "join serviceconfig sc on cs.service_name=sc.service_name and cs.cluster_id=sc.cluster_id " +
+        "join serviceconfigmapping scm on sc.service_config_id=scm.service_config_id " +
+        "join clusterconfig cc on scm.config_id=cc.config_id and sc.cluster_id=cc.cluster_id " +
+        "join clusters c on cc.cluster_id=c.cluster_id and sc.stack_id=c.desired_stack_id " +
+        "where sc.group_id is null and sc.service_config_id=(select max(service_config_id) from serviceconfig sc2 where sc2.service_name=sc.service_name and sc2.cluster_id=sc.cluster_id) " +
+        "group by c.cluster_name, cs.service_name, cc.type_name, sc.version";
     String GET_NOT_SELECTED_SERVICE_CONFIGS_QUERY = "select c.cluster_name, cs.service_name, cc.type_name from clusterservices cs " +
-            "join serviceconfig sc on cs.service_name=sc.service_name and cs.cluster_id=sc.cluster_id " +
-            "join serviceconfigmapping scm on sc.service_config_id=scm.service_config_id " +
-            "join clusterconfig cc on scm.config_id=cc.config_id and cc.cluster_id=sc.cluster_id " +
-            "join clusterconfigmapping ccm on cc.type_name=ccm.type_name and cc.version_tag=ccm.version_tag and cc.cluster_id=ccm.cluster_id " +
-            "join clusters c on ccm.cluster_id=c.cluster_id " +
-            "where sc.group_id is null and sc.service_config_id = (select max(service_config_id) from serviceconfig sc2 where sc2.service_name=sc.service_name and sc2.cluster_id=sc.cluster_id) " +
-            "group by c.cluster_name, cs.service_name, cc.type_name " +
-            "having sum(ccm.selected) < 1";
+        "join serviceconfig sc on cs.service_name=sc.service_name and cs.cluster_id=sc.cluster_id " +
+        "join serviceconfigmapping scm on sc.service_config_id=scm.service_config_id " +
+        "join clusterconfig cc on scm.config_id=cc.config_id and cc.cluster_id=sc.cluster_id " +
+        "join clusterconfigmapping ccm on cc.type_name=ccm.type_name and cc.version_tag=ccm.version_tag and cc.cluster_id=ccm.cluster_id " +
+        "join clusters c on ccm.cluster_id=c.cluster_id " +
+        "where sc.group_id is null and sc.service_config_id = (select max(service_config_id) from serviceconfig sc2 where sc2.service_name=sc.service_name and sc2.cluster_id=sc.cluster_id) " +
+        "group by c.cluster_name, cs.service_name, cc.type_name " +
+        "having sum(ccm.selected) < 1";
     Multimap<String, String> clusterServiceMap = HashMultimap.create();
-    Map<String, Map<String, String>>  clusterStackInfo = new HashMap<>();
+    Map<String, Map<String, String>> clusterStackInfo = new HashMap<>();
     Map<String, Multimap<String, String>> clusterServiceVersionMap = new HashMap<>();
     Map<String, Multimap<String, String>> clusterServiceConfigType = new HashMap<>();
     ResultSet rs = null;
     Statement statement = null;
 
-    if (connection == null) {
-      if (dbAccessor == null) {
-        dbAccessor = injector.getInstance(DBAccessor.class);
-      }
-      connection = dbAccessor.getConnection();
-    }
-
-    if (ambariMetaInfo == null) {
-      ambariMetaInfo = injector.getInstance(AmbariMetaInfo.class);
-    }
 
     try {
-      statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      statement = dbAccessor.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 
       rs = statement.executeQuery(GET_SERVICES_WITHOUT_CONFIGS_QUERY);
       if (rs != null) {
@@ -466,7 +401,8 @@ public class DatabaseConsistencyCheckHelper {
             Multimap<String, String> serviceVersion = clusterServiceVersionMap.get(clusterName);
             serviceVersion.put(serviceName, version);
           } else {
-            Multimap<String, String> serviceVersion = HashMultimap.create();;
+            Multimap<String, String> serviceVersion = HashMultimap.create();
+            ;
             serviceVersion.put(serviceName, version);
             clusterServiceVersionMap.put(clusterName, serviceVersion);
           }
@@ -559,7 +495,7 @@ public class DatabaseConsistencyCheckHelper {
                   serviceConfigsFromStack.removeAll(serviceConfigsFromDB);
                   if (!serviceConfigsFromStack.isEmpty()) {
                     LOG.error("Required config(s): {} is(are) not available for service {} with service config version {} in cluster {}",
-                            StringUtils.join(serviceConfigsFromStack, ","), serviceName, Integer.toString(serviceVersion), clusterName);
+                        StringUtils.join(serviceConfigsFromStack, ","), serviceName, Integer.toString(serviceVersion), clusterName);
                     errorAvailable = true;
                   }
                 }

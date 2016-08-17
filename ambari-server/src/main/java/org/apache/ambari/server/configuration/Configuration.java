@@ -43,6 +43,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import org.apache.ambari.annotations.Experimental;
 import org.apache.ambari.annotations.ExperimentalFeature;
 import org.apache.ambari.annotations.Markdown;
@@ -62,6 +65,7 @@ import org.apache.ambari.server.security.encryption.CertificateUtils;
 import org.apache.ambari.server.security.encryption.CredentialProvider;
 import org.apache.ambari.server.state.services.MetricsRetrievalService;
 import org.apache.ambari.server.state.services.RetryUpgradeActionService;
+
 import org.apache.ambari.server.state.stack.OsFamily;
 import org.apache.ambari.server.utils.AmbariPath;
 import org.apache.ambari.server.utils.DateUtils;
@@ -85,8 +89,6 @@ import com.google.common.collect.Sets;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 
 /**

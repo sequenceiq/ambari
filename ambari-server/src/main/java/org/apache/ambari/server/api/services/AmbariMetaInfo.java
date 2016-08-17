@@ -235,7 +235,7 @@ public class AmbariMetaInfo {
     stackRoot = new File(stackPath);
 
     String commonServicesPath = conf.getCommonServicesPath();
-    if(commonServicesPath != null && !commonServicesPath.isEmpty()) {
+    if (commonServicesPath != null && !commonServicesPath.isEmpty()) {
       commonServicesRoot = new File(commonServicesPath);
     }
 
@@ -1440,5 +1440,22 @@ public class AmbariMetaInfo {
     return versionDefinitions;
   }
 
+  /**
+   * Returns the database schema version.
+   *
+   * @return a String representation of the schema version.
+   */
+  public String getSchemaVersion() {
+    LOG.debug("Retrieving database schema version...");
+    MetainfoEntity metainfoEntity = metaInfoDAO.findByKey(Configuration.SERVER_VERSION_KEY);
+
+    if (null == metainfoEntity) {
+      LOG.debug("Could not find metainfo entity for key: {}. Returning null.", Configuration.SERVER_VERSION_KEY);
+      return null;
+    }
+
+    LOG.debug("Returning schema version: {}", metainfoEntity.getMetainfoValue());
+    return metainfoEntity.getMetainfoValue();
+  }
 
 }

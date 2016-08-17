@@ -25,12 +25,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.ambari.server.configuration.Configuration;
+import javax.inject.Inject;
+
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,185 +38,183 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 
 /**
  * Class that encapsulates OS family logic
  */
 @Singleton
 public class OsFamily {
-    private final static String OS_FAMILY_UBUNTU = "ubuntu";
-    private final static String OS_FAMILY_SUSE = "suse";
-    private final static String OS_FAMILY_REDHAT = "redhat";
+  private final static String OS_FAMILY_UBUNTU = "ubuntu";
+  private final static String OS_FAMILY_SUSE = "suse";
+  private final static String OS_FAMILY_REDHAT = "redhat";
 
-    private final String os_pattern = "([\\D]+|(?:[\\D]+[\\d]+[\\D]+))([\\d]*)";
-    private final String OS_DISTRO = "distro";
-    private final String OS_VERSION = "versions";
-    private final String LOAD_CONFIG_MSG = "Could not load OS family definition from %s file";
-    private final String FILE_NAME = "os_family.json";
-    private final Logger LOG = LoggerFactory.getLogger(OsFamily.class);
+  private final String os_pattern = "([\\D]+|(?:[\\D]+[\\d]+[\\D]+))([\\d]*)";
+  private final String OS_DISTRO = "distro";
+  private final String OS_VERSION = "versions";
+  private final String LOAD_CONFIG_MSG = "Could not load OS family definition from %s file";
+  private final String FILE_NAME = "os_family.json";
+  private final Logger LOG = LoggerFactory.getLogger(OsFamily.class);
 
-    private Map<String, JsonOsFamilyEntry> osMap = null;
-    private JsonOsFamilyRoot jsonOsFamily = null;
+  private Map<String, JsonOsFamilyEntry> osMap = null;
+  private JsonOsFamilyRoot jsonOsFamily = null;
+
+  @Inject
+  public OsFamily(@Named("sharedResourcesDirPath") String sharedResourcesDirPath) {
+    init(sharedResourcesDirPath);
+  }
+
+  private void init(String SharedResourcesPath) {
+    FileInputStream inputStream = null;
+    try {
+      File f = new File(SharedResourcesPath, FILE_NAME);
+      if (!f.exists()) {
+        throw new Exception();
+      }
+      inputStream = new FileInputStream(f);
+
+      Type type = new TypeToken<JsonOsFamilyRoot>() {
+      }.getType();
+      Gson gson = new Gson();
+      jsonOsFamily = gson.fromJson(new InputStreamReader(inputStream), type);
+      osMap = jsonOsFamily.getMapping();
+    } catch (Exception e) {
+      String msg = String.format(LOAD_CONFIG_MSG, new File(SharedResourcesPath, FILE_NAME).toString());
+      LOG.error(msg, e);
+      throw new RuntimeException(msg);
+    } finally {
+      IOUtils.closeQuietly(inputStream);
+    }
+  }
 
   /**
-   * Initialize object
-   * @param conf Configuration instance
+   * Separate os name from os major version
+   *
+   * @param os the os
+   * @return separated os name and os version
    */
-    public OsFamily(Configuration conf){
-      init(conf.getSharedResourcesDirPath());
+  private Map<String, String> parse_os(String os) {
+    Map<String, String> pos = new HashMap<String, String>();
+
+    Pattern r = Pattern.compile(os_pattern);
+    Matcher m = r.matcher(os);
+
+    if (m.matches()) {
+      pos.put(OS_DISTRO, m.group(1));
+      pos.put(OS_VERSION, m.group(2));
+    } else {
+      pos.put(OS_DISTRO, os);
+      pos.put(OS_VERSION, "");
     }
+    return pos;
+  }
 
   /**
-   * Initialize object
-   * @param properties list of properties
+   * Gets the array of compatible OS types
+   *
+   * @param os the os
+   * @return all types that are compatible with the supplied type
    */
-    public OsFamily(Properties properties){
-      init(properties.getProperty(Configuration.SHARED_RESOURCES_DIR.getKey()));
-    }
-
-    private void init(String SharedResourcesPath){
-      FileInputStream inputStream = null;
-      try {
-        File f = new File(SharedResourcesPath, FILE_NAME);
-        if (!f.exists()) {
-          throw new Exception();
+  public Set<String> findTypes(String os) {
+    Map<String, String> pos = parse_os(os);
+    for (String family : osMap.keySet()) {
+      JsonOsFamilyEntry fam = osMap.get(family);
+      if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))) {
+        Set<String> data = new HashSet<String>();
+        for (String item : fam.getDistro()) {
+          data.add(item + pos.get(OS_VERSION));
         }
-        inputStream = new FileInputStream(f);
+        return Collections.unmodifiableSet(data);
+      }
+    }
+    return Collections.emptySet();
+  }
 
-        Type type = new TypeToken<JsonOsFamilyRoot>() {}.getType();
-        Gson gson = new Gson();
-        jsonOsFamily = gson.fromJson(new InputStreamReader(inputStream), type);
-        osMap = jsonOsFamily.getMapping();
-      } catch (Exception e) {
-        LOG.error(String.format(LOAD_CONFIG_MSG, new File(SharedResourcesPath, FILE_NAME).toString()));
-        throw new RuntimeException(e);
-      } finally {
-        IOUtils.closeQuietly(inputStream);
+  /**
+   * Finds the family for the specific OS + it's version number
+   *
+   * @param os the OS
+   * @return the family, or <code>null</code> if not defined
+   */
+  public String find(String os) {
+    Map<String, String> pos = parse_os(os);
+    for (String family : osMap.keySet()) {
+      JsonOsFamilyEntry fam = osMap.get(family);
+      if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))) {
+        return family + pos.get(OS_VERSION);
       }
     }
 
-    /**
-     * Separate os name from os major version
-     * @param os the os
-     * @return separated os name and os version
-     */
-    private Map<String,String> parse_os(String os){
-      Map<String,String> pos = new HashMap<String,String>();
+    return null;
+  }
 
-      Pattern r = Pattern.compile(os_pattern);
-      Matcher m = r.matcher(os);
-
-      if (m.matches()) {
-        pos.put(OS_DISTRO, m.group(1));
-        pos.put(OS_VERSION, m.group(2));
-      } else {
-        pos.put(OS_DISTRO, os);
-        pos.put(OS_VERSION, "");
+  /**
+   * Finds the family for the specific OS
+   *
+   * @param os the OS
+   * @return the family, or <code>null</code> if not defined
+   */
+  public String find_family(String os) {
+    Map<String, String> pos = parse_os(os);
+    for (String family : osMap.keySet()) {
+      JsonOsFamilyEntry fam = osMap.get(family);
+      if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))) {
+        return family;
       }
-      return pos;
     }
+    return null;
+  }
 
-    /**
-     * Gets the array of compatible OS types
-     * @param os the os
-     * @return all types that are compatible with the supplied type
-     */
-    public Set<String> findTypes(String os) {
-      Map<String,String>  pos = parse_os(os);
-      for ( String family : osMap.keySet()) {
-        JsonOsFamilyEntry fam = osMap.get(family);
-        if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))){
-          Set<String> data=new HashSet<String>();
-          for (String item: fam.getDistro()) {
-            data.add(item + pos.get(OS_VERSION));
-          }
-            return Collections.unmodifiableSet(data);
+  /**
+   * Form list of all supported os types
+   *
+   * @return one dimension list with os types
+   */
+  public Set<String> os_list() {
+    Set<String> r = new HashSet<String>();
+    for (String family : osMap.keySet()) {
+      JsonOsFamilyEntry fam = osMap.get(family);
+      for (String version : fam.getVersions()) {
+        Set<String> data = new HashSet<String>();
+        for (String item : fam.getDistro()) {
+          data.add(item + version);
         }
+        r.addAll(data);
       }
-      return Collections.emptySet();
     }
+    return r;
+  }
 
-    /**
-     * Finds the family for the specific OS + it's version number
-     * @param os the OS
-     * @return the family, or <code>null</code> if not defined
-     */
-    public String find(String os) {
-      Map<String,String>  pos = parse_os(os);
-      for ( String family : osMap.keySet()) {
-        JsonOsFamilyEntry fam = osMap.get(family);
-        if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))){
-          return family + pos.get(OS_VERSION);
-        }
-      }
+  public boolean isUbuntuFamily(String osType) {
+    return isOsInFamily(osType, OS_FAMILY_UBUNTU);
+  }
 
-      return null;
-    }
+  public boolean isSuseFamily(String osType) {
+    return isOsInFamily(osType, OS_FAMILY_SUSE);
+  }
 
-    /**
-     * Finds the family for the specific OS
-     * @param os the OS
-     * @return the family, or <code>null</code> if not defined
-     */
-    public String find_family(String os) {
-      Map<String,String>  pos = parse_os(os);
-      for ( String family : osMap.keySet()) {
-        JsonOsFamilyEntry fam = osMap.get(family);
-        if (fam.getDistro().contains(pos.get(OS_DISTRO)) && fam.getVersions().contains(pos.get(OS_VERSION))){
-          return family;
-        }
-      }
-      return null;
-    }
-    /**
-     * Form list of all supported os types
-     * @return one dimension list with os types
-     */
-    public Set<String> os_list(){
-      Set<String> r= new HashSet<String>();
-      for ( String family : osMap.keySet()) {
-        JsonOsFamilyEntry fam = osMap.get(family);
-        for (String version: fam.getVersions()){
-          Set<String> data=new HashSet<String>();
-          for (String item: fam.getDistro()) {
-            data.add(item + version);
-          }
-          r.addAll(data);
-        }
-      }
-      return r;
-    }
+  public boolean isRedhatFamily(String osType) {
+    return isOsInFamily(osType, OS_FAMILY_REDHAT);
+  }
 
-    public boolean isUbuntuFamily(String osType) {
-      return isOsInFamily(osType, OS_FAMILY_UBUNTU);
-    }
+  public boolean isOsInFamily(String osType, String osFamily) {
+    String familyOfOsType = find_family(osType);
+    return (familyOfOsType != null && isFamilyExtendedByFamily(familyOfOsType, osFamily));
+  }
 
-    public boolean isSuseFamily(String osType) {
-      return isOsInFamily(osType, OS_FAMILY_SUSE);
-    }
+  private boolean isFamilyExtendedByFamily(String currentFamily, String family) {
+    return (currentFamily.equals(family) || getOsFamilyParent(currentFamily) != null && isFamilyExtendedByFamily(getOsFamilyParent(currentFamily), family));
+  }
 
-    public boolean isRedhatFamily(String osType) {
-      return isOsInFamily(osType, OS_FAMILY_REDHAT);
-    }
+  private String getOsFamilyParent(String osFamily) {
+    return osMap.get(osFamily).getExtendsFamily();
+  }
 
-    public boolean isOsInFamily(String osType, String osFamily) {
-      String familyOfOsType = find_family(osType);
-      return (familyOfOsType != null && isFamilyExtendedByFamily(familyOfOsType, osFamily));
-    }
-
-    private boolean isFamilyExtendedByFamily(String currentFamily, String family) {
-      return (currentFamily.equals(family) || getOsFamilyParent(currentFamily)!=null && isFamilyExtendedByFamily(getOsFamilyParent(currentFamily), family));
-    }
-
-    private String getOsFamilyParent(String osFamily) {
-      return osMap.get(osFamily).getExtendsFamily();
-    }
-
-    /**
-     * @return the map of aliases
-     */
-    public Map<String, String> getAliases() {
-      return (null == jsonOsFamily || null == jsonOsFamily.getAliases()) ?
-          Collections.<String, String>emptyMap() : jsonOsFamily.getAliases();
-    }
+  /**
+   * @return the map of aliases
+   */
+  public Map<String, String> getAliases() {
+    return (null == jsonOsFamily || null == jsonOsFamily.getAliases()) ?
+        Collections.<String, String>emptyMap() : jsonOsFamily.getAliases();
+  }
 }

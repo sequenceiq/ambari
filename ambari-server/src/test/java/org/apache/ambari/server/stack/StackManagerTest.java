@@ -117,7 +117,7 @@ public class StackManagerTest {
 
     replay(config, metaInfoDao, stackDao, extensionDao, linkDao, actionMetadata);
 
-    osFamily = new OsFamily(config);
+    osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
     StackManager stackManager = new StackManager(new File(stackRoot), null, null, osFamily, false,
         metaInfoDao, actionMetadata, stackDao, extensionDao, linkDao);
@@ -741,7 +741,7 @@ public class StackManagerTest {
 
     replay(config, metaInfoDao, stackDao, extensionDao, linkDao, actionMetadata);
 
-    OsFamily osFamily = new OsFamily(config);
+    OsFamily osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
     StackManager stackManager = new StackManager(stackRoot, commonServices, extensions,
             osFamily, false, metaInfoDao, actionMetadata, stackDao, extensionDao, linkDao);
@@ -806,7 +806,7 @@ public class StackManagerTest {
 
     replay(config, metaInfoDao, stackDao, extensionDao, linkDao, actionMetadata);
 
-    OsFamily osFamily = new OsFamily(config);
+    OsFamily osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
     StackManager stackManager = new StackManager(stackRoot, commonServices, extensions, osFamily,
         false, metaInfoDao, actionMetadata, stackDao, extensionDao, linkDao);
@@ -935,7 +935,7 @@ public class StackManagerTest {
 
     replay(config, metaInfoDao, stackDao, extensionDao, linkDao, actionMetadata);
 
-    OsFamily osFamily = new OsFamily(config);
+    OsFamily osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
     StackManager stackManager = new StackManager(stackRoot, commonServices, extensions, osFamily,
         false, metaInfoDao, actionMetadata, stackDao, extensionDao, linkDao);

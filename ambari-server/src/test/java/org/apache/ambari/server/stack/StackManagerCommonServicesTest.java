@@ -115,7 +115,7 @@ public class StackManagerCommonServicesTest {
 
     replay(config, stackDao, extensionDao, linkDao);
 
-    osFamily = new OsFamily(config);
+    osFamily = new OsFamily(config.getSharedResourcesDirPath());
 
     replay(metaInfoDao, actionMetadata);
 

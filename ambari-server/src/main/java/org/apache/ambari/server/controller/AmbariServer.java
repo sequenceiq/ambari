@@ -271,6 +271,11 @@ public class AmbariServer {
   @Inject
   ViewDirectoryWatcher viewDirectoryWatcher;
 
+
+  @Inject
+  private DatabaseConsistencyCheckHelper databaseConsistencyCheckHelper;
+
+
   public String getServerOsType() {
     return configs.getServerOsType();
   }
@@ -906,6 +911,13 @@ public class AmbariServer {
     }
   }
 
+
+  public void checkDatabaseVersion() throws AmbariException {
+    LOG.info("Validating database version...");
+    databaseConsistencyCheckHelper.checkDBVersionCompatible();
+    LOG.info("Validating database version...DONE.");
+  }
+
   public static void main(String[] args) throws Exception {
     Injector injector = Guice.createInjector(new ControllerModule(), new AuditLoggerModule());
 
@@ -916,8 +928,9 @@ public class AmbariServer {
       setupProxyAuth();
 
       injector.getInstance(GuiceJpaInitializer.class);
-      DatabaseConsistencyCheckHelper.checkDBVersionCompatible();
+
       server = injector.getInstance(AmbariServer.class);
+      server.checkDatabaseVersion();
       CertificateManager certMan = injector.getInstance(CertificateManager.class);
       certMan.initRootCert();
       KerberosChecker.checkJaasConfiguration();

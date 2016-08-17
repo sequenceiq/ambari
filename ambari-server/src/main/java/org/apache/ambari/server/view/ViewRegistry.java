@@ -2155,7 +2155,7 @@ public class ViewRegistry {
     protected void configure() {
       Configuration configuration = new Configuration();
       bind(Configuration.class).toInstance(configuration);
-      bind(OsFamily.class).toInstance(new OsFamily(configuration));
+      bind(OsFamily.class).toInstance(new OsFamily(configuration.getSharedResourcesDirPath()));
     }
   }
 }
