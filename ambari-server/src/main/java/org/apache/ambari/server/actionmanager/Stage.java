@@ -76,6 +76,8 @@ public class Stage {
   private String commandParamsStage;
   private String hostParamsStage;
 
+  private CommandExecutionType commandExecutionType = CommandExecutionType.STAGE_BASED;
+
   private boolean skippable;
   private boolean supportsAutoSkipOnFailure;
 
@@ -152,6 +154,7 @@ public class Stage {
     clusterHostInfo = stageEntity.getClusterHostInfo();
     commandParamsStage = stageEntity.getCommandParamsStage();
     hostParamsStage = stageEntity.getHostParamsStage();
+    commandExecutionType = stageEntity.getCommandExecutionType();
 
     List<Long> taskIds = hostRoleCommandDAO.findTaskIdsByStage(requestId, stageId);
     Collection<HostRoleCommand> commands = dbAccessor.getTasks(taskIds);
@@ -191,6 +194,7 @@ public class Stage {
     stageEntity.setClusterHostInfo(clusterHostInfo);
     stageEntity.setCommandParamsStage(commandParamsStage);
     stageEntity.setHostParamsStage(hostParamsStage);
+    stageEntity.setCommandExecutionType(commandExecutionType);
 
     for (Role role : successFactors.keySet()) {
       RoleSuccessCriteriaEntity roleSuccessCriteriaEntity = new RoleSuccessCriteriaEntity();
@@ -259,6 +263,13 @@ public class Stage {
     this.hostParamsStage = hostParamsStage;
   }
 
+  public CommandExecutionType getCommandExecutionType() {
+    return commandExecutionType;
+  }
+
+  public void setCommandExecutionType(CommandExecutionType commandExecutionType) {
+    this.commandExecutionType = commandExecutionType;
+  }
 
   public synchronized void setStageId(long stageId) {
     if (this.stageId != -1) {

@@ -15,40 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ambari.server.stageplanner;
+package org.apache.ambari.server.metadata;
 
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Singleton;
-import org.apache.ambari.server.actionmanager.StageFactory;
-import org.apache.ambari.server.metadata.RoleCommandOrder;
+import org.apache.ambari.server.state.Cluster;
 
+public interface RoleCommandOrderProvider {
 
-@Singleton
-public class RoleGraphFactoryImpl implements RoleGraphFactory {
-  private Injector injector;
+  RoleCommandOrder getRoleCommandOrder(Cluster cluster);
+  RoleCommandOrder getRoleCommandOrder(Long clusterId);
 
-  @Inject
-  public RoleGraphFactoryImpl(Injector injector) {
-    this.injector = injector;
-  }
-
-  /**
-   *
-   * @return
-   */
-  @Override
-  public RoleGraph createNew() {
-    return new RoleGraph(this.injector.getInstance(StageFactory.class));
-  }
-
-  /**
-   *
-   * @param rd
-   * @return
-   */
-  @Override
-  public RoleGraph createNew(RoleCommandOrder rd) {
-    return new RoleGraph(rd, this.injector.getInstance(StageFactory.class));
-  }
 }

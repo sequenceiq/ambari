@@ -83,6 +83,7 @@ import org.apache.ambari.server.actionmanager.ActionManager;
 import org.apache.ambari.server.actionmanager.HostRoleCommand;
 import org.apache.ambari.server.actionmanager.RequestFactory;
 import org.apache.ambari.server.actionmanager.Stage;
+import org.apache.ambari.server.actionmanager.CommandExecutionType;
 import org.apache.ambari.server.actionmanager.StageFactory;
 import org.apache.ambari.server.agent.ExecutionCommand;
 import org.apache.ambari.server.agent.ExecutionCommand.KeyNames;
@@ -105,6 +106,7 @@ import org.apache.ambari.server.customactions.ActionDefinition;
 import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.metadata.ActionMetadata;
 import org.apache.ambari.server.metadata.RoleCommandOrder;
+import org.apache.ambari.server.metadata.RoleCommandOrderProvider;
 import org.apache.ambari.server.orm.dao.ClusterDAO;
 import org.apache.ambari.server.orm.dao.ClusterVersionDAO;
 import org.apache.ambari.server.orm.dao.ExtensionDAO;
@@ -239,6 +241,10 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
   private final Injector injector;
 
   private final Gson gson;
+
+
+  @Inject
+  private RoleCommandOrderProvider roleCommandOrderProvider;
 
   @Inject
   private ServiceFactory serviceFactory;
@@ -403,10 +409,7 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
 
   @Override
   public RoleCommandOrder getRoleCommandOrder(Cluster cluster) {
-      RoleCommandOrder rco;
-      rco = injector.getInstance(RoleCommandOrder.class);
-      rco.initialize(cluster);
-      return rco;
+      return roleCommandOrderProvider.getRoleCommandOrder(cluster);
   }
 
   @Override
@@ -2842,6 +2845,11 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
       RoleCommandOrder rco = getRoleCommandOrder(cluster);
       RoleGraph rg = roleGraphFactory.createNew(rco);
 
+
+      if (CommandExecutionType.DEPENDENCY_ORDERED == configs.getStageExecutionType() && "INITIAL_START".equals
+        (requestProperties.get("phase"))) {
+        rg.setStageExecutionType(CommandExecutionType.DEPENDENCY_ORDERED);
+      }
       rg.build(stage);
       requestStages.addStages(rg.getStages());
 

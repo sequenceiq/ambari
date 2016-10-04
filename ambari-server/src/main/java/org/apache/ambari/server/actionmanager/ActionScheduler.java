@@ -50,6 +50,8 @@ import org.apache.ambari.server.events.ActionFinalReportReceivedEvent;
 import org.apache.ambari.server.events.jpa.EntityManagerCacheInvalidationEvent;
 import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.events.publishers.JPAEventPublisher;
+import org.apache.ambari.server.metadata.RoleCommandOrder;
+import org.apache.ambari.server.metadata.RoleCommandOrderProvider;
 import org.apache.ambari.server.orm.dao.HostRoleCommandDAO;
 import org.apache.ambari.server.orm.entities.HostRoleCommandEntity;
 import org.apache.ambari.server.orm.entities.RequestEntity;
@@ -66,6 +68,7 @@ import org.apache.ambari.server.state.ServiceComponentHostEvent;
 import org.apache.ambari.server.state.fsm.InvalidStateTransitionException;
 import org.apache.ambari.server.state.svccomphost.ServiceComponentHostOpFailedEvent;
 import org.apache.ambari.server.utils.StageUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +98,9 @@ class ActionScheduler implements Runnable {
 
   public static final String FAILED_TASK_ABORT_REASONING =
           "Server considered task failed and automatically aborted it";
+
+  @Inject
+  private RoleCommandOrderProvider roleCommandOrderProvider;
 
   @Inject
   private UnitOfWork unitOfWork;
@@ -395,8 +401,16 @@ class ActionScheduler implements Runnable {
         }
 
         // Commands that will be scheduled in current scheduler wakeup
-        List<ExecutionCommand> commandsToSchedule = new ArrayList<ExecutionCommand>();
+        List<ExecutionCommand> commandsToSchedule = new ArrayList<>();
+
         Map<String, RoleStats> roleStats = processInProgressStage(stage, commandsToSchedule);
+
+        // DEPENDENCY_BASED execution means all commands are in one stage, one command can be executed only if all of
+        // it's dependencies are already finished
+        if (CommandExecutionType.DEPENDENCY_ORDERED == configuration.getStageExecutionType() &&
+          CommandExecutionType.DEPENDENCY_ORDERED == stage.getCommandExecutionType()) {
+          filterOutCommandsWithDependencies(request, commandsToSchedule);
+        }
 
         // Check if stage is failed
         boolean failed = false;
@@ -505,7 +519,7 @@ class ActionScheduler implements Runnable {
         }
 
         if (exclusiveRequestIsGoing) {
-          // As a result, we will prevent any further stages from being executed
+          // As a result, we wi ll prevent any further stages from being executed
           LOG.debug("Stage requires exclusive execution, skipping all executing any further stages");
           break;
         }
@@ -518,6 +532,38 @@ class ActionScheduler implements Runnable {
       unitOfWork.end();
     }
   }
+
+  private void filterOutCommandsWithDependencies(RequestEntity request, List<ExecutionCommand> commandsToSchedule) {
+    long t = System.nanoTime();
+    Set<RoleCommandOrder.RoleCommandPair> commandsToScheduleSet = new HashSet<>();
+    for (ExecutionCommand command: commandsToSchedule) {
+      commandsToScheduleSet.add(new RoleCommandOrder.RoleCommandPair(Role.valueOf(command.getRole()), command
+        .getRoleCommand()));
+    }
+
+    RoleCommandOrder rco = roleCommandOrderProvider.getRoleCommandOrder(request.getClusterId());
+    if (rco != null) {
+      for (Iterator<ExecutionCommand> it = commandsToSchedule.iterator(); it.hasNext(); ) {
+        ExecutionCommand command = it.next();
+        Set<RoleCommandOrder.RoleCommandPair> roleCommandDependencies = rco.getDependencies().get(new
+          RoleCommandOrder
+            .RoleCommandPair(Role.valueOf(command.getRole()), command.getRoleCommand()));
+
+        boolean commandHasDependentCommands = roleCommandDependencies == null ? false : CollectionUtils.containsAny
+          (commandsToScheduleSet,
+            roleCommandDependencies);
+
+        //LOG.info("SXI: {} {} dependencies: {}", command.getRole(), command.getRoleCommand(),
+        // commandHasDependentCommands);
+        if (commandHasDependentCommands) {
+          it.remove();
+        }
+      }
+    }
+    t = System.nanoTime() - t;
+    LOG.info("FOCD: {}", t);
+  }
+
 
   /**
    * Returns the list of hosts that have a task assigned

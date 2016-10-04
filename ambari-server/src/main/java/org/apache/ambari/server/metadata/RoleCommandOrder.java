@@ -43,7 +43,6 @@ import org.apache.ambari.server.AmbariException;
  */
 public class RoleCommandOrder {
 
-  @Inject Configuration configs;
   @Inject AmbariMetaInfo ambariMetaInfo;
 
   private final static Logger LOG =
@@ -66,7 +65,7 @@ public class RoleCommandOrder {
             add(RoleCommand.SERVICE_CHECK);
           }};
 
-  static class RoleCommandPair {
+  public static class RoleCommandPair {
     Role role;
     RoleCommand cmd;
 
@@ -160,9 +159,9 @@ public class RoleCommandOrder {
   }
 
   public void initialize(Cluster cluster) {
-    Boolean hasGLUSTERFS = false;
-    Boolean isNameNodeHAEnabled = false;
-    Boolean isResourceManagerHAEnabled = false;
+    boolean hasGLUSTERFS = false;
+    boolean isNameNodeHAEnabled = false;
+    boolean isResourceManagerHAEnabled = false;
 
     try {
       if (cluster != null && cluster.getService("GLUSTERFS") != null) {
@@ -189,11 +188,17 @@ public class RoleCommandOrder {
     } catch (AmbariException e) {
     }
 
+    initialize(cluster, hasGLUSTERFS, isNameNodeHAEnabled, isResourceManagerHAEnabled);
+  }
+
+  public void initialize(Cluster cluster, boolean hasGLUSTERFS, boolean isNameNodeHAEnabled,
+    boolean isResourceManagerHAEnabled) {
+
     StackId stackId = cluster.getCurrentStackVersion();
     StackInfo stack = null;
     try {
       stack = ambariMetaInfo.getStack(stackId.getStackName(),
-            stackId.getStackVersion());
+        stackId.getStackVersion());
     } catch (AmbariException e) {
     }
 
@@ -412,7 +417,7 @@ public class RoleCommandOrder {
   /**
    * For test purposes
    */
-  Map<RoleCommandPair, Set<RoleCommandPair>> getDependencies() {
+  public Map<RoleCommandPair, Set<RoleCommandPair>> getDependencies() {
     return dependencies;
   }
 }

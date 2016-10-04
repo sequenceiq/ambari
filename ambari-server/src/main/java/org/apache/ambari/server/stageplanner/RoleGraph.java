@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import org.apache.ambari.server.RoleCommand;
 import org.apache.ambari.server.actionmanager.HostRoleCommand;
 import org.apache.ambari.server.actionmanager.Stage;
+import org.apache.ambari.server.actionmanager.CommandExecutionType;
 import org.apache.ambari.server.actionmanager.StageFactory;
 import org.apache.ambari.server.metadata.RoleCommandOrder;
 import org.apache.commons.logging.Log;
@@ -35,24 +36,26 @@ public class RoleGraph {
 
   private static Log LOG = LogFactory.getLog(RoleGraph.class);
 
-  
   Map<String, RoleGraphNode> graph = null;
   private RoleCommandOrder roleDependencies;
   private Stage initialStage = null;
   private boolean sameHostOptimization = true;
+  private CommandExecutionType stageExecutionType;
 
   @Inject
   private StageFactory stageFactory;
 
   @Inject
-  public RoleGraph(StageFactory stageFactory) {
-    this.stageFactory = stageFactory;
+  public RoleGraph(RoleCommandOrder rd) {
+    this.roleDependencies = rd;
   }
 
-  @Inject
-  public RoleGraph(RoleCommandOrder rd, StageFactory stageFactory) {
-    this(stageFactory);
-    this.roleDependencies = rd;
+  public CommandExecutionType getStageExecutionType() {
+    return stageExecutionType;
+  }
+
+  public void setStageExecutionType(CommandExecutionType stageExecutionType) {
+    this.stageExecutionType = stageExecutionType;
   }
 
   /**
@@ -80,18 +83,20 @@ public class RoleGraph {
       }
     }
 
-    if (null != roleDependencies) {
-      //Add edges
-      for (String roleI : graph.keySet()) {
-        for (String roleJ : graph.keySet()) {
-          if (!roleI.equals(roleJ)) {
-            RoleGraphNode rgnI = graph.get(roleI);
-            RoleGraphNode rgnJ = graph.get(roleJ);
-            int order = roleDependencies.order(rgnI, rgnJ);
-            if (order == -1) {
-              rgnI.addEdge(rgnJ);
-            } else if (order == 1) {
-              rgnJ.addEdge(rgnI);
+    if (stageExecutionType == CommandExecutionType.STAGE_BASED) {
+      if (null != roleDependencies) {
+        //Add edges
+        for (String roleI : graph.keySet()) {
+          for (String roleJ : graph.keySet()) {
+            if (!roleI.equals(roleJ)) {
+              RoleGraphNode rgnI = graph.get(roleI);
+              RoleGraphNode rgnJ = graph.get(roleJ);
+              int order = roleDependencies.order(rgnI, rgnJ);
+              if (order == -1) {
+                rgnI.addEdge(rgnJ);
+              } else if (order == 1) {
+                rgnJ.addEdge(rgnI);
+              }
             }
           }
         }
@@ -166,6 +171,10 @@ public class RoleGraph {
     newStage.setSuccessFactors(origStage.getSuccessFactors());
     newStage.setSkippable(origStage.isSkippable());
     newStage.setAutoSkipFailureSupported(origStage.isAutoSkipOnFailureSupported());
+    if (stageExecutionType != null) {
+      newStage.setCommandExecutionType(stageExecutionType);
+    }
+
     for (RoleGraphNode rgn : stageGraphNodes) {
       for (String host : rgn.getHosts()) {
         newStage.addExecutionCommandWrapper(origStage, host, rgn.getRole());
