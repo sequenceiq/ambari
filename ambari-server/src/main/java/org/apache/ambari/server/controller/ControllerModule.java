@@ -79,6 +79,14 @@ import org.apache.ambari.server.controller.spi.ResourceProvider;
 import org.apache.ambari.server.controller.utilities.KerberosChecker;
 import org.apache.ambari.server.metadata.CachedRoleCommandOrderProvider;
 import org.apache.ambari.server.metadata.RoleCommandOrderProvider;
+import org.apache.ambari.server.events.AmbariEvent;
+import org.apache.ambari.server.hooks.HookContext;
+import org.apache.ambari.server.hooks.HookService;
+import org.apache.ambari.server.hooks.AmbariEventFactory;
+import org.apache.ambari.server.hooks.HookContextFactory;
+import org.apache.ambari.server.hooks.users.BatchUserHookContext;
+import org.apache.ambari.server.hooks.users.UserCreatedEvent;
+import org.apache.ambari.server.hooks.users.UserHookService;
 import org.apache.ambari.server.metrics.system.MetricsService;
 import org.apache.ambari.server.metrics.system.impl.MetricsServiceImpl;
 import org.apache.ambari.server.notifications.DispatchFactory;
@@ -345,14 +353,14 @@ public class ControllerModule extends AbstractModule {
 
     // Host role commands status summary max cache enable/disable
     bindConstant().annotatedWith(Names.named(HostRoleCommandDAO.HRC_STATUS_SUMMARY_CACHE_ENABLED)).
-      to(configuration.getHostRoleCommandStatusSummaryCacheEnabled());
+        to(configuration.getHostRoleCommandStatusSummaryCacheEnabled());
 
     // Host role commands status summary max cache size
     bindConstant().annotatedWith(Names.named(HostRoleCommandDAO.HRC_STATUS_SUMMARY_CACHE_SIZE)).
-      to(configuration.getHostRoleCommandStatusSummaryCacheSize());
+        to(configuration.getHostRoleCommandStatusSummaryCacheSize());
     // Host role command status summary cache expiry duration in minutes
     bindConstant().annotatedWith(Names.named(HostRoleCommandDAO.HRC_STATUS_SUMMARY_CACHE_EXPIRY_DURATION_MINUTES)).
-      to(configuration.getHostRoleCommandStatusSummaryCacheExpiryDuration());
+        to(configuration.getHostRoleCommandStatusSummaryCacheExpiryDuration());
 
     bind(AmbariManagementController.class).to(
         AmbariManagementControllerImpl.class);
@@ -378,6 +386,7 @@ public class ControllerModule extends AbstractModule {
     bindByAnnotation(null);
     bindNotificationDispatchers(null);
     registerUpgradeChecks(null);
+    bind(HookService.class).to(UserHookService.class);
   }
 
   // ----- helper methods ----------------------------------------------------
@@ -468,6 +477,10 @@ public class ControllerModule extends AbstractModule {
     bind(HostRoleCommandFactory.class).to(HostRoleCommandFactoryImpl.class);
     bind(SecurityHelper.class).toInstance(SecurityHelperImpl.getInstance());
     bind(BlueprintFactory.class);
+
+    install(new FactoryModuleBuilder().implement(AmbariEvent.class, Names.named("userCreated"), UserCreatedEvent.class).build(AmbariEventFactory.class));
+    install(new FactoryModuleBuilder().implement(HookContext.class, BatchUserHookContext.class).build(HookContextFactory.class));
+
   }
 
   /**
@@ -579,11 +592,11 @@ public class ControllerModule extends AbstractModule {
 
     if (null == beanDefinitions || beanDefinitions.isEmpty()) {
       ClassPathScanningCandidateComponentProvider scanner =
-        new ClassPathScanningCandidateComponentProvider(false);
+          new ClassPathScanningCandidateComponentProvider(false);
 
       // match all implementations of the dispatcher interface
       AssignableTypeFilter filter = new AssignableTypeFilter(
-        NotificationDispatcher.class);
+          NotificationDispatcher.class);
 
       scanner.addIncludeFilter(filter);
 
