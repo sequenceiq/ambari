@@ -18,10 +18,6 @@
 
 package org.apache.ambari.server.view;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.Thread.sleep;
-import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -30,20 +26,26 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.zip.ZipFile;
 
+import javax.annotation.Nullable;
+
 import org.apache.ambari.server.configuration.Configuration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.Thread.sleep;
 
 @Singleton
 public class ViewDirectoryWatcher implements DirectoryWatcher {
@@ -65,7 +67,7 @@ public class ViewDirectoryWatcher implements DirectoryWatcher {
 
   private Future<?> watchTask;
 
-  private static Log LOG = LogFactory.getLog(ViewDirectoryWatcher.class);
+  private static Logger LOG = LoggerFactory.getLogger(ViewDirectoryWatcher.class);
 
   // Callbacks to hook into file processing
   private List<Function<Path, Boolean>> hooks = Lists.newArrayList(loggingHook());
@@ -88,6 +90,10 @@ public class ViewDirectoryWatcher implements DirectoryWatcher {
   public void start() {
 
     try {
+      long start = Calendar.getInstance().getTimeInMillis();
+      viewRegistry.loadExtractedViews();
+//      viewRegistry.readViewArchives();
+      LOG.info("READ ARCHIVES in: {} milliseconds.", Calendar.getInstance().getTimeInMillis() - start);
       Path path = buildWatchService();
       Runnable task = startWatching(path);
       watchTask = executorService.submit(task);
@@ -169,7 +175,6 @@ public class ViewDirectoryWatcher implements DirectoryWatcher {
    * lengths of the file which was detected as being created
    *
    * This would block for ~ 7 seconds in most cases
-   *
    *
    * @param resolvedPath
    * @return false if the file check failed, true otherwise

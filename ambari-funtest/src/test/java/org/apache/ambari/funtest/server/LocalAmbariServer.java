@@ -67,7 +67,7 @@ public class LocalAmbariServer implements Runnable {
 
       AmbariServer.setupProxyAuth();
       ambariServer = injector.getInstance(AmbariServer.class);
-      ambariServer.initViewRegistry();
+//      ambariServer.initViewRegistry();
       ambariServer.run();
     } catch (InterruptedException ex) {
       LOG.info(ex);
