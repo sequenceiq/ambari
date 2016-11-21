@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,14 +29,19 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.xml.bind.JAXBException;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
@@ -58,7 +63,7 @@ public class ViewExtractorTest {
   private static final File extractedArchiveDir = createNiceMock(File.class);
   private static final File viewArchive = createNiceMock(File.class);
   private static final File archiveDir = createNiceMock(File.class);
-  private static final File entryFile  = createNiceMock(File.class);
+  private static final File entryFile = createNiceMock(File.class);
   private static final File classesDir = createNiceMock(File.class);
   private static final File libDir = createNiceMock(File.class);
   private static final File metaInfDir = createNiceMock(File.class);
@@ -72,7 +77,7 @@ public class ViewExtractorTest {
 
   @Before
   public void resetGlobalMocks() {
-    reset(extractedArchiveDir, viewArchive,archiveDir,entryFile, classesDir, libDir, metaInfDir, viewJarFile,
+    reset(extractedArchiveDir, viewArchive, archiveDir, entryFile, classesDir, libDir, metaInfDir, viewJarFile,
         jarEntry, fos, configuration, viewDir, fileEntry, viewDAO);
   }
 
@@ -92,16 +97,14 @@ public class ViewExtractorTest {
     expect(configuration.getViewExtractionThreadPoolTimeout()).andReturn(10000L).anyTimes();
     if (System.getProperty("os.name").contains("Windows")) {
       expect(viewArchive.getAbsolutePath()).andReturn("\\var\\lib\\ambari-server\\resources\\views\\work\\MY_VIEW{1.0.0}").anyTimes();
-    }
-    else {
+    } else {
       expect(viewArchive.getAbsolutePath()).andReturn("/var/lib/ambari-server/resources/views/work/MY_VIEW{1.0.0}").anyTimes();
     }
 
     expect(archiveDir.exists()).andReturn(false);
     if (System.getProperty("os.name").contains("Windows")) {
       expect(archiveDir.getAbsolutePath()).andReturn("\\var\\lib\\ambari-server\\resources\\views\\work\\MY_VIEW{1.0.0}").anyTimes();
-    }
-    else {
+    } else {
       expect(archiveDir.getAbsolutePath()).andReturn("/var/lib/ambari-server/resources/views/work/MY_VIEW{1.0.0}").anyTimes();
     }
     expect(archiveDir.mkdir()).andReturn(true);
@@ -160,8 +163,7 @@ public class ViewExtractorTest {
 
     if (System.getProperty("os.name").contains("Windows")) {
       Assert.assertTrue(viewExtractor.ensureExtractedArchiveDirectory("\\var\\lib\\ambari-server\\resources\\views\\work"));
-    }
-    else {
+    } else {
       Assert.assertTrue(viewExtractor.ensureExtractedArchiveDirectory("/var/lib/ambari-server/resources/views/work"));
     }
 
@@ -179,8 +181,7 @@ public class ViewExtractorTest {
 
     if (System.getProperty("os.name").contains("Windows")) {
       Assert.assertTrue(viewExtractor.ensureExtractedArchiveDirectory("\\var\\lib\\ambari-server\\resources\\views\\work"));
-    }
-    else {
+    } else {
       Assert.assertTrue(viewExtractor.ensureExtractedArchiveDirectory("/var/lib/ambari-server/resources/views/work"));
     }
 
@@ -197,8 +198,7 @@ public class ViewExtractorTest {
 
     if (System.getProperty("os.name").contains("Windows")) {
       Assert.assertFalse(viewExtractor.ensureExtractedArchiveDirectory("\\var\\lib\\ambari-server\\resources\\views\\work"));
-    }
-    else {
+    } else {
       Assert.assertFalse(viewExtractor.ensureExtractedArchiveDirectory("/var/lib/ambari-server/resources/views/work"));
     }
     verify(extractedArchiveDir);
@@ -218,8 +218,7 @@ public class ViewExtractorTest {
       files.put("\\var\\lib\\ambari-server\\resources\\views\\work\\MY_VIEW{1.0.0}\\WEB-INF/classes", classesDir);
       files.put("\\var\\lib\\ambari-server\\resources\\views\\work\\MY_VIEW{1.0.0}\\WEB-INF/lib", libDir);
       files.put("\\var\\lib\\ambari-server\\resources\\views\\work\\MY_VIEW{1.0.0}\\META-INF", metaInfDir);
-    }
-    else {
+    } else {
       files.put("/var/lib/ambari-server/resources/views/work", extractedArchiveDir);
       files.put("/var/lib/ambari-server/resources/views/work/MY_VIEW{1.0.0}", archiveDir);
       files.put("/var/lib/ambari-server/resources/views/work/MY_VIEW{1.0.0}/view.xml", entryFile);
@@ -235,7 +234,6 @@ public class ViewExtractorTest {
     jarFiles.put(viewArchive, viewJarFile);
 
     TestViewArchiveUtility archiveUtility = new TestViewArchiveUtility(viewConfigs, files, outputStreams, jarFiles);
-
 
 
     ViewExtractor viewExtractor = new ViewExtractor();
@@ -266,7 +264,7 @@ public class ViewExtractorTest {
     @Override
     public ViewConfig getViewConfigFromExtractedArchive(String archivePath, boolean validate)
         throws JAXBException, FileNotFoundException {
-      for (File viewConfigKey: viewConfigs.keySet()) {
+      for (File viewConfigKey : viewConfigs.keySet()) {
         if (viewConfigKey.getAbsolutePath().equals(archivePath)) {
           return viewConfigs.get(viewConfigKey);
         }
@@ -288,5 +286,50 @@ public class ViewExtractorTest {
     public JarInputStream getJarFileStream(File file) throws IOException {
       return jarFiles.get(file);
     }
+  }
+
+
+  @Test
+  public void testClassLoader() throws Exception {
+
+    List<URL> urlList = new LinkedList<URL>();
+
+
+
+
+    // include the classes directory
+
+
+    File classesDir = new File("/Users/lpuskas/Downloads/work/TEZ{0.7.0.0-SNAPSHOT}/WEB-INF/classes");
+    if (classesDir.exists()) {
+      urlList.add(classesDir.toURI().toURL());
+    }
+
+    // include any libraries in the lib directory
+    File libDir = new File("/Users/lpuskas/Downloads/work/TEZ{0.7.0.0-SNAPSHOT}/WEB-INF/lib");
+    if (libDir.exists()) {
+      File[] files = libDir.listFiles();
+      if (files != null) {
+        for (final File fileEntry : files) {
+          if (!fileEntry.isDirectory()) {
+            urlList.add(fileEntry.toURI().toURL());
+          }
+        }
+      }
+    }
+
+    // include the archive directory
+    urlList.add(new File("/Users/lpuskas/Downloads/work/TEZ{0.7.0.0-SNAPSHOT}").toURI().toURL());
+
+
+    ViewClassLoader viewClassLoader = new ViewClassLoader(null, urlList.toArray(new URL[urlList.size()]));
+    long startTimeInMs = Calendar.getInstance().getTimeInMillis();
+
+    Object ret = viewClassLoader.findResource("view.log4j.properties");
+    if (null == ret) throw new IllegalStateException("bazmeg");
+    System.out.println("Found in: " + String.valueOf(Calendar.getInstance().getTimeInMillis() - startTimeInMs) + " milliseconds");
+
+    System.out.print("Anyad");
+
   }
 }

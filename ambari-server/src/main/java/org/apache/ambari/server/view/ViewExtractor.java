@@ -74,9 +74,9 @@ public class ViewExtractor {
 
     try {
       // Remove directory if jar was updated since last extracting
-      if (archiveDir.exists() && viewArchive.lastModified() > archiveDir.lastModified()) {
-        FileUtils.deleteDirectory(archiveDir);
-      }
+//      if (archiveDir.exists() && viewArchive.lastModified() > archiveDir.lastModified()) {
+//        FileUtils.deleteDirectory(archiveDir);
+//      }
 
       // Skip if the archive has already been extracted
       if (!archiveDir.exists()) {
@@ -156,7 +156,9 @@ public class ViewExtractor {
         }
       }
 
+      LOG.info("Marker: get view config");
       ViewConfig viewConfig = archiveUtility.getViewConfigFromExtractedArchive(archivePath, false);
+      LOG.info("Marker: get view config ... DONE.");
 
       return getArchiveClassLoader(viewConfig, archiveDir);
 
@@ -190,8 +192,12 @@ public class ViewExtractor {
   private ClassLoader getArchiveClassLoader(ViewConfig viewConfig, File archiveDir)
       throws IOException {
 
+    LOG.info("Marker: Create archive classloader ....");
     String    archivePath = archiveDir.getAbsolutePath();
     List<URL> urlList     = new LinkedList<URL>();
+
+    // include the archive directory
+    urlList.add(archiveDir.toURI().toURL());
 
     // include the classes directory
     String classesPath = archivePath + File.separator + ARCHIVE_CLASSES_DIR;
@@ -214,9 +220,9 @@ public class ViewExtractor {
       }
     }
 
-    // include the archive directory
-    urlList.add(archiveDir.toURI().toURL());
 
+
+    LOG.info("Marker: Create archive classloader ... DONE.");
     return new ViewClassLoader(viewConfig, urlList.toArray(new URL[urlList.size()]));
   }
 

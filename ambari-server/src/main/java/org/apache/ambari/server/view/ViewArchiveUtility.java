@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@
 package org.apache.ambari.server.view;
 
 import org.apache.ambari.server.view.configuration.ViewConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
@@ -28,6 +30,7 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -49,6 +52,8 @@ public class ViewArchiveUtility {
   private static final String VIEW_XML = "view.xml";
   private static final String WEB_INF_VIEW_XML = "WEB-INF/classes/" + VIEW_XML;
   private static final String VIEW_XSD = "view.xsd";
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ViewArchiveUtility.class);
 
 
   // ----- ViewArchiveUtility ------------------------------------------------
@@ -77,7 +82,7 @@ public class ViewArchiveUtility {
 
     try {
 
-      JAXBContext jaxbContext       = JAXBContext.newInstance(ViewConfig.class);
+      JAXBContext jaxbContext = JAXBContext.newInstance(ViewConfig.class);
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 
       return (ViewConfig) jaxbUnmarshaller.unmarshal(configStream);
@@ -100,25 +105,32 @@ public class ViewArchiveUtility {
    */
   public ViewConfig getViewConfigFromExtractedArchive(String archivePath, boolean validate)
       throws JAXBException, IOException, SAXException {
-    File configFile = new File(archivePath + File.separator + VIEW_XML);
+    return getViewConfigFromExtractedViewDir(new File(archivePath), validate);
+  }
 
-    if (!configFile.exists()) {
-      configFile = new File(archivePath + File.separator + WEB_INF_VIEW_XML);
+  public ViewConfig getViewConfigFromExtractedViewDir(File extractedViewDir, boolean validate) throws IOException, SAXException, JAXBException {
+    File viewXML = new File(extractedViewDir, VIEW_XML);
+
+    if (!viewXML.exists()) {
+      viewXML = new File(extractedViewDir, WEB_INF_VIEW_XML);
     }
+
+    InputStream viewXmlIs = new FileInputStream(viewXML);
 
     if (validate) {
-      validateConfig(new FileInputStream(configFile));
+      validateConfig(viewXmlIs);
     }
 
-    InputStream  configStream = new FileInputStream(configFile);
     try {
-
-      JAXBContext  jaxbContext      = JAXBContext.newInstance(ViewConfig.class);
+      LOGGER.info("Jaxb setup ...");
+      JAXBContext jaxbContext = JAXBContext.newInstance(ViewConfig.class);
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-
-      return (ViewConfig) jaxbUnmarshaller.unmarshal(configStream);
+      LOGGER.info("Jaxb setup ... DONE. Unmarshalling ...");
+      ViewConfig viewCfg = (ViewConfig) jaxbUnmarshaller.unmarshal(viewXmlIs);
+      LOGGER.info("Unmarshalling ... DONE");
+      return viewCfg;
     } finally {
-      configStream.close();
+      viewXmlIs.close();
     }
   }
 
@@ -166,7 +178,7 @@ public class ViewArchiveUtility {
    * @throws SAXException if the validation fails
    * @throws IOException if the descriptor file can not be read
    */
-  protected void validateConfig(InputStream  configStream) throws SAXException, IOException {
+  protected void validateConfig(InputStream configStream) throws SAXException, IOException {
     SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
 
     URL schemaUrl = getClass().getClassLoader().getResource(VIEW_XSD);
