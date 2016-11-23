@@ -120,7 +120,13 @@ public abstract class AmbariEvent {
     /**
      * Cluster configuration changed.
      */
-    CLUSTER_CONFIG_CHANGED;
+
+    CLUSTER_CONFIG_CHANGED,
+
+    /**
+     * Cluster configuration finished.
+     */
+    CLUSTER_CONFIG_FINISHED;
   }
 
   /**

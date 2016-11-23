@@ -492,7 +492,7 @@ public class AmbariServer {
 
       SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
 
-      viewRegistry.readViewArchives();
+      viewRegistry.readOnlySystemViewArchives();
       viewDirectoryWatcher.start();
 
       handlerList.addHandler(root);

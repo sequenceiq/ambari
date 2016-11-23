@@ -57,6 +57,7 @@ import org.apache.ambari.server.controller.AmbariServer;
 import org.apache.ambari.server.controller.AmbariSessionManager;
 import org.apache.ambari.server.controller.spi.Resource;
 import org.apache.ambari.server.controller.spi.ResourceProvider;
+import org.apache.ambari.server.events.ClusterConfigFinishedEvent;
 import org.apache.ambari.server.events.ServiceInstalledEvent;
 import org.apache.ambari.server.events.publishers.AmbariEventPublisher;
 import org.apache.ambari.server.orm.dao.MemberDAO;
@@ -519,6 +520,13 @@ public class ViewRegistry {
   }
 
   /**
+   * Read all view archives.
+   */
+  public void readOnlySystemViewArchives() {
+    readViewArchives(true, false, ALL_VIEWS_REG_EXP);
+  }
+
+  /**
    * Read only view archives with names corresponding to given regular expression.
    *
    * @param viewNameRegExp view name regular expression
@@ -709,7 +717,7 @@ public class ViewRegistry {
               targetInstanceEntity.getName());
     List<PrivilegeEntity> targetInstancePrivileges = privilegeDAO.findByResourceId(targetInstanceEntity.getResource().getId());
     if (targetInstancePrivileges.size() > 0) {
-      LOG.warn("Target instance {} already has privileges assigned, these will not be deleted. Manual clean up may be needed",targetInstanceEntity.getName());
+      LOG.warn("Target instance {} already has privileges assigned, these will not be deleted. Manual clean up may be needed", targetInstanceEntity.getName());
     }
 
     List<PrivilegeEntity> sourceInstancePrivileges = privilegeDAO.findByResourceId(sourceInstanceEntity.getResource().getId());
@@ -997,6 +1005,13 @@ public class ViewRegistry {
     } catch (AmbariException e) {
       LOG.warn("Unknown cluster id " + clusterId + ".");
     }
+  }
+
+  @Subscribe
+  public void onClusterConfigFinishedEvent(ClusterConfigFinishedEvent event) {
+    LOG.info("Start extracting non-system views", event.getClusterName());
+    readNonSystemViewViewArchives();
+    LOG.info("Start extracting non-system views");
   }
 
 
@@ -1546,7 +1561,59 @@ public class ViewRegistry {
 
   }
 
+  private void readNonSystemViewViewArchives() {
+    try {
 
+      File viewDir = configuration.getViewsDir();
+      String extractedArchivesPath = viewDir.getAbsolutePath() +
+        File.separator + EXTRACTED_ARCHIVES_DIR;
+
+        File[] files  = viewDir.listFiles();
+
+        if (files != null) {
+          final String serverVersion = ambariMetaInfoProvider.get().getServerVersion();
+
+          final ExecutorService executorService = getExecutorService(configuration);
+
+          for (final File archiveFile : files) {
+            if (!archiveFile.isDirectory()) {
+              try {
+                final ViewConfig viewConfig = archiveUtility.getViewConfigFromArchive(archiveFile);
+
+                String commonName = viewConfig.getName();
+                String version = viewConfig.getVersion();
+                String viewName = ViewEntity.getViewName(commonName, version);
+
+                final String extractedArchiveDirPath = extractedArchivesPath + File.separator + viewName;
+                final File extractedArchiveDirFile = archiveUtility.getFile(extractedArchiveDirPath);
+
+                final ViewEntity viewDefinition = new ViewEntity(viewConfig, configuration, extractedArchiveDirPath);
+
+                boolean systemView = viewDefinition.isSystem();
+                if (!systemView) {
+                  addDefinition(viewDefinition);
+                  executorService.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                      readViewArchive(viewDefinition, archiveFile, extractedArchiveDirFile, serverVersion);
+                      migrateDataFromPreviousVersion(viewDefinition, serverVersion);
+                    }
+                  });
+                }
+
+              } catch (Exception e) {
+                String msg = "Caught exception reading view archive " + archiveFile.getAbsolutePath();
+                LOG.error(msg, e);
+              }
+            }
+          }
+        }
+
+    } catch (Exception e) {
+      LOG.error("Caught exception reading view archives.", e);
+    }
+
+  }
 
 
   // read the view archives.
@@ -1688,7 +1755,7 @@ public class ViewRegistry {
 
         LOG.info("View deployed: " + viewDefinition.getName() + ".");
       }
-    } catch (Exception e) {
+    } catch (Throwable e) {
       String msg = "Caught exception loading view " + viewDefinition.getName();
 
       setViewStatus(viewDefinition, ViewEntity.ViewStatus.ERROR, msg + " : " + e.getMessage());
