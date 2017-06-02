@@ -4156,8 +4156,6 @@ public class AmbariManagementControllerImpl implements AmbariManagementControlle
       }
     }
 
-    commandParamsForStage = gson.toJson(commandParamsStage);
-
     Stage stage = createNewStage(requestStageContainer.getLastStageId(), cluster, requestId, requestContext,
         commandParamsForStage, jsons.getHostParamsForStage());
 

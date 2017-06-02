@@ -91,6 +91,21 @@ class NameNode(Script):
     hdfs_binary = self.get_hdfs_binary()
     namenode(action="configure", hdfs_binary=hdfs_binary, env=env)
 
+  def save_configs(self, env):
+    import params
+    env.set_params(params)
+    hdfs()
+
+  def reload_configs(self, env):
+    import params
+    env.set_params(params)
+    Logger.info("RELOAD CONFIGS")
+
+  def reloadproxyusers(self, env):
+    import params
+    env.set_params(params)
+    Logger.info("RELOAD HDFS PROXY USERS")
+
   def start(self, env, upgrade_type=None):
     import params
     env.set_params(params)

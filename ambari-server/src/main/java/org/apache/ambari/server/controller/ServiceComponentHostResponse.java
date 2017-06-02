@@ -39,6 +39,7 @@ public class ServiceComponentHostResponse {
   private String desiredStackVersion;
   private String desiredState;
   private boolean staleConfig = false;
+  private boolean reloadConfig = false;
   private String adminState = null;
   private String maintenanceState = null;
   private UpgradeState upgradeState = UpgradeState.NONE;
@@ -279,6 +280,22 @@ public class ServiceComponentHostResponse {
    */
   public void setStaleConfig(boolean stale) {
     staleConfig = stale;
+  }
+
+  /**
+   *
+   * @return
+   */
+  public boolean isReloadConfig() {
+    return reloadConfig;
+  }
+
+  /**
+   *
+   * @param reloadConfig
+   */
+  public void setReloadConfig(boolean reloadConfig) {
+    this.reloadConfig = reloadConfig;
   }
 
   /**

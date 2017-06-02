@@ -1031,10 +1031,10 @@ public class ServiceComponentHostImpl implements ServiceComponentHost {
 
     if (!oldState.equals(getState())) {
       LOG.info("Host role transitioned to a new state"
-               + ", serviceComponentName=" + getServiceComponentName()
-               + ", hostName=" + getHostName()
-               + ", oldState=" + oldState
-               + ", currentState=" + getState());
+              + ", serviceComponentName=" + getServiceComponentName()
+              + ", hostName=" + getHostName()
+              + ", oldState=" + oldState
+              + ", currentState=" + getState());
       if (LOG.isDebugEnabled()) {
         LOG.debug("ServiceComponentHost transitioned to a new state"
             + ", serviceComponentName=" + getServiceComponentName()
@@ -1299,6 +1299,14 @@ public class ServiceComponentHostImpl implements ServiceComponentHost {
       LOG.error("Could not determine stale config", e);
     }
 
+    try {
+      Cluster cluster = clusters.getCluster(clusterName);
+      String refreshConfigsCommand = helper.getRefreshConfigsCommand(cluster, hostName, serviceName, serviceComponentName);
+      r.setReloadConfig(refreshConfigsCommand != null);
+    } catch (Exception e) {
+      LOG.error("Could not determine reload config flag", e);
+    }
+
     return r;
   }
 
@@ -1521,7 +1529,7 @@ public class ServiceComponentHostImpl implements ServiceComponentHost {
   @Transactional
   public void setRestartRequired(boolean restartRequired) {
     LOG.debug("Set RestartRequired on serviceName = {} componentName = {} hostName = {} to {}",
-        getServiceName(), getServiceComponentName(), getHostName(), restartRequired);
+            getServiceName(), getServiceComponentName(), getHostName(), restartRequired);
 
     HostComponentDesiredStateEntity desiredStateEntity = getDesiredStateEntity();
     if (desiredStateEntity != null) {
@@ -1550,10 +1558,10 @@ public class ServiceComponentHostImpl implements ServiceComponentHost {
     }
 
     return repositoryVersionDAO.create(
-        stackEntity,
-        version,
-        stackId.getStackName() + "-" + version,
-        repositoryVersionHelper.serializeOperatingSystems(stackInfo.getRepositories()));
+            stackEntity,
+            version,
+            stackId.getStackName() + "-" + version,
+            repositoryVersionHelper.serializeOperatingSystems(stackInfo.getRepositories()));
   }
 
   /**

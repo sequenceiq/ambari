@@ -2357,7 +2357,7 @@ var urls = {
         type: 'POST',
         data: JSON.stringify({
           "RequestInfo": {
-            "command": "RESTART",
+            "command": "RECONFIGURE",
             "context": "Restart all required services",
             "operation_level": "host_component"
           },

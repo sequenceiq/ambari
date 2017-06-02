@@ -104,7 +104,9 @@ public class HostComponentResourceProvider extends AbstractControllerResourcePro
   public static final String HOST_COMPONENT_ACTUAL_CONFIGS_PROPERTY_ID
       = PropertyHelper.getPropertyId("HostRoles", "actual_configs");
   public static final String HOST_COMPONENT_STALE_CONFIGS_PROPERTY_ID
-      = PropertyHelper.getPropertyId("HostRoles", "stale_configs");
+          = PropertyHelper.getPropertyId("HostRoles", "stale_configs");
+  public static final String HOST_COMPONENT_RELOAD_CONFIGS_PROPERTY_ID
+          = PropertyHelper.getPropertyId("HostRoles", "reload_configs");
   public static final String HOST_COMPONENT_DESIRED_ADMIN_STATE_PROPERTY_ID
       = PropertyHelper.getPropertyId("HostRoles", "desired_admin_state");
   public static final String HOST_COMPONENT_MAINTENANCE_STATE_PROPERTY_ID
@@ -245,6 +247,8 @@ public class HostComponentResourceProvider extends AbstractControllerResourcePro
               response.getActualConfigs(), requestedIds);
       setResourceProperty(resource, HOST_COMPONENT_STALE_CONFIGS_PROPERTY_ID,
               response.isStaleConfig(), requestedIds);
+      setResourceProperty(resource, HOST_COMPONENT_RELOAD_CONFIGS_PROPERTY_ID,
+              response.isReloadConfig(), requestedIds);
       setResourceProperty(resource, HOST_COMPONENT_UPGRADE_STATE_PROPERTY_ID,
               response.getUpgradeState(), requestedIds);
 

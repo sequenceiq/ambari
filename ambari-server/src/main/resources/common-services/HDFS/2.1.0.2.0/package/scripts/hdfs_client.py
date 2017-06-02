@@ -43,6 +43,11 @@ class HdfsClient(Script):
     env.set_params(params)
     hdfs()
 
+  def save_configs(self, env):
+    import params
+    env.set_params(params)
+    hdfs()
+
   def start(self, env, upgrade_type=None):
     import params
     env.set_params(params)

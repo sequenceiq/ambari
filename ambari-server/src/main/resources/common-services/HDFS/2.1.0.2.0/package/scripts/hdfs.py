@@ -137,7 +137,8 @@ def hdfs(name=None):
       Package(params.lzo_packages,
               retry_on_repo_unavailability=params.agent_stack_retry_on_unavailability,
               retry_count=params.agent_stack_retry_count)
-      
+
+
 def install_snappy():
   import params
   Directory([params.so_target_dir_x86, params.so_target_dir_x64],
@@ -149,6 +150,7 @@ def install_snappy():
   Link(params.so_target_x64,
        to=params.so_src_x64,
   )
+
 
 @OsFamilyFuncImpl(os_family=OSConst.WINSRV_FAMILY)
 def hdfs(component=None):
